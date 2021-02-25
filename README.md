@@ -1,19 +1,19 @@
-#perpSniper v0.2
-###Tools/signals for Binance cryptocurrency derivatives (futures) trading
-#####Flask app with standalone gunicorn server (setup_script.py)
+# perpSniper v0.2
+### Tools/signals for Binance cryptocurrency derivatives (futures) trading
+##### Flask app with standalone gunicorn server (setup_script.py)
 
 ![Main Screen](screenshots/mainscreen_top.jpg)
 ![Main Screen](screenshots/mainscreen_bottom.jpg)
 ![Settings Screen](screenshots/settings.jpg)
 
-##Features:
+## Features:
 - automatic stop-loss and trailing take-profit orders set when entering a position
 - automatic quantity (percentage of balance) set before opening a position
 - live charts (2-second update time) showing entry, take-profit and stop-loss lines as well as RSI, MACD and 50/200 EMA for 1m, 15m, 1h & 4h timeframes
 - signal alerts for volume, macd, rsi overbought/sold, rsi divergence, and ema crosses for 15m, 1h & 4h timeframes
 
 
-##Installation
+## Installation
 You will need your Binance api keys. It is recommended to enable IP restriction when setting up keys unless you trust me not to have included a secret script to steal your API keys (I haven't.... or have I??? I haven't but just use the restriction anyway)! From the command line run:
 
 `python setup_script.py`
