@@ -14,7 +14,7 @@
 
 
 ##Installation
-You will need your Binance api keys. It is recommended to enable IP restriction when setting up keys unless you trust me not to have included a secret script to steal your API keys (I haven't)! From the command line run:
+You will need your Binance api keys. It is recommended to enable IP restriction when setting up keys unless you trust me not to have included a secret script to steal your API keys (I haven't.... or have I??? I haven't but just use the restriction anyway)! From the command line run:
 
 `python setup_script.py`
 
