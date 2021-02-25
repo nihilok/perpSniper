@@ -5,6 +5,7 @@
 ![Main Screen](screenshots/mainscreen_top.jpg)
 ![Main Screen](screenshots/mainscreen_bottom.jpg)
 ![Settings Screen](screenshots/settings.jpg)
+![Open Positions](screenshots/positions.png)
 
 ## Features:
 - automatic stop-loss and trailing take-profit orders set when entering a position
