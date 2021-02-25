@@ -283,6 +283,36 @@ function handleTouchMove(evt) {
     yDown = null;
 };
 
+function handleRightClick(evt) {
+  var coinName = this.id
+  var closeId = `${coinName}Close`
+  evt.preventDefault()
+  if (this.getAttribute('data-open')) {
+    document.getElementById(closeId).style.display = 'none'
+    $(this).css({
+              'animation': 'slideSwipeDrawerClose .2s linear',
+              '-webkit-transform' : 'translateX(' + 0 + 'rem)',
+              '-moz-transform'    : 'translateX(' + 0 + 'rem)',
+              '-ms-transform'     : 'translateX(' + 0 + 'rem)',
+              '-o-transform'      : 'translateX(' + 0 + 'rem)',
+              'transform'         : 'translateX(' + 0 + 'rem)'
+    });
+    this.removeAttribute('data-open')
+  }
+  else {
+    document.getElementById(closeId).style.display = 'flex'
+    $(this).css({
+              'animation': 'slideSwipeDrawerOpen .2s linear',
+              '-webkit-transform' : 'translateX(' + -6 + 'rem)',
+              '-moz-transform'    : 'translateX(' + -6 + 'rem)',
+              '-ms-transform'     : 'translateX(' + -6 + 'rem)',
+              '-o-transform'      : 'translateX(' + -6 + 'rem)',
+              'transform'         : 'translateX(' + -6 + 'rem)'
+    });
+    this.setAttribute('data-open', true)
+  }
+}
+
 function removeCoin(coin) {
   coin.parentNode.parentNode.parentNode.removeChild(coin.parentNode.parentNode);
 }
@@ -357,14 +387,15 @@ function addCoin() {
   coin += 'USDT'
 //  var quickTradeComponent = document.createElement('div')
   var innerDiv = document.createElement('div')
-  innerDiv.innerHTML = `<div class="flex flex-row justify-center items-center space-x-2"><div onclick="openQuickLong('${coin}')" class="flex items-center justify-center text-2xl text-white font-bold cursor-pointer bg-green-500 hover:bg-green-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-24">LONG</div><div id="quickTradeCoinText" class="flex flex-col items-center justify-center text-2xl text-white font-bold w-64 cursor-pointer">${coin}</div><div onclick="openQuickShort('${coin}')" class="flex items-center justify-center text-2xl text-white font-bold cursor-pointer bg-red-500 hover:bg-red-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-24">SHORT</div><div id="${coin}Close" class="text-3xl text-red-500 px-10" style="display: none"><div class="flex flex-col" onclick="closeOpenPosition(this)"><i class="fas fa-dollar-sign"></i><div class="text-xs">Close</div></div><div onclick="removeCoin(this)" class="flex flex-col ml-10"><i class="fas fa-trash"></i><div class="text-xs">Remove</div></div></div></div>`;
+  innerDiv.innerHTML = `<div class="flex flex-row justify-center items-center space-x-2"><div onclick="openQuickLong('${coin}')" class="flex items-center justify-center text-2xl text-white font-bold cursor-pointer bg-green-500 hover:bg-green-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-24">LONG</div><div id="${coin}QuickTradeCoinText" class="flex flex-col items-center justify-center text-2xl text-white font-bold w-64 cursor-pointer">${coin}</div><div onclick="openQuickShort('${coin}')" class="flex items-center justify-center text-2xl text-white font-bold cursor-pointer bg-red-500 hover:bg-red-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-24">SHORT</div><div id="${coin}Close" class="text-3xl text-red-500 px-10" style="display: none"><div class="flex flex-col" onclick="closeOpenPosition(this)"><i class="fas fa-dollar-sign"></i><div class="text-xs">Close</div></div><div onclick="removeCoin(this)" class="flex flex-col ml-10"><i class="fas fa-trash"></i><div class="text-xs">Remove</div></div></div></div>`;
   innerDiv.id = coin
   innerDiv.style.opacity = 1
   innerDiv.style.animation = 'fadeIn 1s linear'
   innerDiv.addEventListener('touchstart', handleTouchStart, false);
   innerDiv.addEventListener('touchmove', handleTouchMove, false);
+  innerDiv.addEventListener('contextmenu', handleRightClick, false);
   quickTradeDiv.appendChild(innerDiv)
-  document.getElementById('quickTradeCoinText').addEventListener('click', changeChart, false);
+  document.getElementById(`${coin}QuickTradeCoinText`).addEventListener('click', changeChart, false);
 //  quickTradeDiv.appendChild(quickTradeComponent)
 }
 
@@ -435,9 +466,6 @@ function startInterval(_interval) {
     }, _interval);
 }
 
-updateChart()
-startInterval(chartInterval)
-
 function selectInterval(btn) {
     var intervalText = document.getElementById('intervalText')
     var interval = btn.innerHTML
@@ -463,63 +491,16 @@ function selectInterval(btn) {
     updateChart();
 }
 
-
-var serverTimeClock = document.getElementById('serverTimeClock');
-
-// function serverTime() {
-//   fetch(`${window.origin}/server_time`)
-//   .then(function(response){
-//       if (response.status !== 200) {
-//           displayMessage(`Bad response from server time api: ${response.status}`)
-//           return ;
-//       }
-//       response.json().then(function(data){
-//           serverTimeClock.innerHTML = data.serverTime
-//       })
-//   })
-//   t = setTimeout(serverTime, 1000)
-// }
-
-
-window.onload = function() {
-    console.log('window loaded')
-    var coinInput = document.getElementById("coinInput");
-    // Execute a function when the user releases a key on the keyboard
-    coinInput.addEventListener("keyup", function(event) {
-      // Number 13 is the "Enter" key on the keyboard
-      if (event.keyCode === 13) {
-        // console.log('keypress registered')
-        // Cancel the default action, if needed
-        // event.preventDefault();
-        // Trigger the button element with a click
-        document.getElementById("addCoinBtn").click();
-      }
-    });
-    startTime();
-    getPositions()
-    setInterval(function() {
-      getPositions()
-    }, 1200)
-    getBalance()
-    setInterval(function() {
-      getBalance()
-    }, 900)
-    getRecentAlerts()
-    setInterval(function() {
-      getRecentAlerts()
-    }, 60000)
-  };
-
-function startTime() {
+function startTime(clock) {
   var today = new Date();
   var h = today.getHours();
   var m = today.getMinutes();
   var s = today.getSeconds();
   m = checkTime(m);
   s = checkTime(s);
-  serverTimeClock.innerHTML =
+  clock.innerHTML =
   h + ":" + m + ":" + s;
-  var t = setTimeout(startTime, 500);
+  var t = setTimeout(function(){startTime(clock)}, 500);
 }
 function checkTime(i) {
   if (i < 10) {i = "0" + i};  // add zero in front of numbers < 10

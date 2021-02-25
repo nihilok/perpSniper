@@ -89,10 +89,35 @@
       </div>
     </div>
     <h1 class="text-2xl font-semibold text-white my-3">PerpSniper v0.2</h1>
+  
+  <!-- Positions/balance table -->
+    <div class="flex flex-row justify-between items-end w-full">
+      <div>
+        <h1 class="text-2xl mt-5 font-semibold ml-1">Open Positions:</h1>
+      </div>
+      <div onclick="closeAllPositions()" class="flex items-center justify-center text-red-500 hover:text-black hover:bg-red-600 font-bold cursor-pointer border-2 border-red-500 hover:border-red-600 shadow-lg hover:shadow-sm rounded-xl h-10 w-32 ml-auto mr-1">
+        CLOSE ALL
+      </div>
+    </div>
+    <div id="positionsDiv" class="flex flex-col overflow-x-hidden w-full">
+      <table style="width: 100%" class="mx-auto mt-2">
+        <thead>
+        <tr class="text-center font-bold bg-blue-500">
+          <td>PAIR</td>
+          <td>DIRECTION</td>
+          <td>QUANTITY</td>
+          <td>PNL</td>
+          <td>ROE</td>
+        </tr>
+        </thead>
+        <tbody id="tBody" class="bg-gray-800"></tbody>
+      </table>
+    </div>
   </div>
+
   
   <!-- Chart -->
-  <div class="flex-col-center min-h-1/2 mt-28">
+  <div class="flex-col-center min-h-1/2 mt-64">
     <img id="chartSpace" src="#">
   </div>
   
@@ -128,43 +153,19 @@
       </table>
     </div>
   </div>
+</div>
 
-
-
+<div class="container mx-auto max-w-screen overflow-x-hidden">
   <!-- Quicktrade section -->
   <div class="flex flex-col items-center justify-center space-y-4 max-w-screen md:w-1/2 mt-3 mx-auto">
     <div class="flex flex-col items-center justify-center space-y-4 max-w-screen" id="quickTradeDiv">
     </div>
     <input type="text" id="coinInput" class="w-64 text-center text-black border-2 border-gray-300 text-4xl rounded shadow-inner focus:outline-none focus:ring focus:border-2 focus:border-blue-300">
     <div class="flex items-center justify-center space-x-4">
-      <div id="addCoinBtn" onclick="addCoin()" class="flex items-center justify-center text-2xl text-white font-bold cursor-pointer bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-32">
-        ADD COIN
+      <div id="addCoinBtn" onclick="addCoin()" class="flex items-center justify-center text-2xl text-white font-bold cursor-pointer bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-max px-2">
+        ADD QUICKTRADE PAIR
       </div>
     </div>
-  </div>
-  
-  <!-- Positions/balance table -->
-  <div class="flex flex-row justify-between items-end w-full">
-    <div>
-      <h1 class="text-2xl mt-5 font-semibold ml-1">Open Positions:</h1>
-    </div>
-    <div onclick="closeAllPositions()" class="flex items-center justify-center text-red-500 hover:text-black hover:bg-red-600 font-bold cursor-pointer border-2 border-red-500 hover:border-red-600 shadow-lg hover:shadow-sm rounded-xl h-10 w-32 ml-auto mr-1">
-      CLOSE ALL
-    </div>
-  </div>
-  <div id="positionsDiv" class="flex flex-col overflow-x-hidden w-full">
-    <table style="width: 100%" class="mx-auto mt-2">
-      <thead>
-      <tr class="text-center font-bold bg-blue-500">
-        <td>PAIR</td>
-        <td>DIRECTION</td>
-        <td>QUANTITY</td>
-        <td>PNL</td>
-        <td>ROE</td>
-      </tr>
-      </thead>
-      <tbody id="tBody" class="bg-gray-800"></tbody>
-    </table>
   </div>
 
 <!-- Hot symbols -->
@@ -200,5 +201,37 @@
         integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
         crossorigin="anonymous"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='js/index.js') }}"></script>
+<script type="text/javascript">
+  window.onload = function() {
+    var clock = document.getElementById('serverTimeClock');
+    startTime(clock);
+    updateChart()
+    startInterval(chartInterval)
+    getPositions()
+    setInterval(function() {
+      getPositions()
+    }, 1200)
+    getBalance()
+    setInterval(function() {
+      getBalance()
+    }, 900)
+    getRecentAlerts()
+    setInterval(function() {
+      getRecentAlerts()
+    }, 60000)
+    var coinInput = document.getElementById("coinInput");
+    // Execute a function when the user releases a key on the keyboard
+    coinInput.addEventListener("keyup", function(event) {
+      // Number 13 is the "Enter" key on the keyboard
+      if (event.keyCode === 13) {
+        // console.log('keypress registered')
+        // Cancel the default action, if needed
+        // event.preventDefault();
+        // Trigger the button element with a click
+        document.getElementById("addCoinBtn").click();
+      }
+    });
+  };
+</script>
 </body>
 </html>
