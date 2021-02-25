@@ -1,9 +1,6 @@
-import atexit
 import datetime
-import importlib
 import json
 import os
-import sys
 from threading import Thread
 import logging
 from flask import Flask, redirect, url_for, render_template, request, session, jsonify, make_response
@@ -44,9 +41,6 @@ def tear_down():
     print('app teardown completed')
 
 
-# atexit.register(tear_down)
-
-# @app.before_first_request(start_signals)
 @app.route('/')
 def quick_trade():
     return render_template('quicktrade.html', title='PerpSniper v0.2')
@@ -169,8 +163,6 @@ def shutdown_server():
     if func is None:
         raise RuntimeError('Not running with the Werkzeug Server')
     func()
-    sys.exit()
-
 
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
@@ -238,6 +230,5 @@ def server_time():
 
 
 if __name__ == '__main__':
-    print(app.before_first_request_funcs)
     start_signals()
     app.run(host='0.0.0.0', port=9000, use_reloader=False, debug=True)
