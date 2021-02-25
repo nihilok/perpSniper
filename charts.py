@@ -3,14 +3,16 @@ import io
 import sys
 
 import matplotlib
-matplotlib.use('agg')
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from matplotlib import pyplot as plt
+matplotlib.use('agg')
 
 import mplfinance as mpf
 import pandas as pd
 import pandas_ta as ta
+
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
+from matplotlib import pyplot as plt
 
 from coinData import CoinData
 
@@ -37,7 +39,7 @@ class Charts:
         if len(df) >= 288:
             df['ema_200'] = ta.ema(df.close, 200)
         else:
-            df['ema_200'] = ta.ema(df.close, len(df.close)-3)
+            df['ema_200'] = ta.ema(df.close, len(df.close) - 3)
         df = df.tail(88)
         return df
 
@@ -86,8 +88,8 @@ class Charts:
         axes[1].axhline(70, color='gray', ls='--', linewidth=1)
         axes[1].axhline(30, color='gray', ls='--', linewidth=1)
         if self.entry:
-            tp = self.entry + self.entry*self.tp if self.direction else self.entry - self.entry*self.tp
-            sl = self.entry - self.entry*self.sl if self.direction else self.entry + self.entry*self.sl
+            tp = self.entry + self.entry * self.tp if self.direction else self.entry - self.entry * self.tp
+            sl = self.entry - self.entry * self.sl if self.direction else self.entry + self.entry * self.sl
             tp_color = 'red' if self.direction else 'green'
             sl_color = 'red' if not self.direction else 'green'
             axes[0].axhline(self.entry, color='yellow', ls="--", linewidth=.5)
