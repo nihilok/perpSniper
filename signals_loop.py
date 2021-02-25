@@ -233,13 +233,9 @@ class MainLoop:
                 elif job[1] == 'cron':
                     scheduler.add_job(job[0], trigger=job[1], second=job[2])
 
-
     def teardown(self):
         self.close_database()
-        scheduler.remove_all_jobs()
-        scheduler.shutdown()
-        self.data.teardown()
-        print('signals loop teardown completed')
+        print('Signals loop teardown completed')
 
 
 # if __name__ == '__main__':

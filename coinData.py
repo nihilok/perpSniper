@@ -21,16 +21,12 @@ data_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(data_path, 'data')
 
 
-NUMBER_OF_SYMBOLS = 5
-
-
-def bsm_tear_down(bsm, conn_key):
-    bsm.stop_socket(conn_key)
-    reactor.stop()
+NUMBER_OF_SYMBOLS = 50
 
 
 class CoinData:
     def __init__(self):
+        """Get most popular symbols, download historical data, start live data web scoket"""
         print('Getting symbol list')
         self.symbols = get_popular_coins()[:NUMBER_OF_SYMBOLS]
         self.intervals = ['1m', '15m', '1h', '4h']
@@ -50,6 +46,10 @@ class CoinData:
             '1h': 60,
             '4h': 240,
         }
+        self.bsm = BinanceSocketManager(client)
+        self.conn_key = self.bsm.start_multiplex_socket(self.get_streams(), self.get_data)
+        self.shutdown = False
+
 
     def get_data(self, msg):
         static = msg
@@ -129,22 +129,26 @@ class CoinData:
                                ]
                         writer.writerow(row)
 
-    def websocket_loop(self):
-        self.web_socket = True
-        bsm = BinanceSocketManager(client)
-        # noinspection PyTypeChecker
+    def get_streams(self):
         streams = []
         for symbol in self.symbols:
-            streams += [f'{symbol.lower()}@kline_1m', f'{symbol.lower()}@kline_15m', f'{symbol.lower()}@kline_1h', f'{symbol.lower()}@kline_4h']
+            streams += [f'{symbol.lower()}@kline_1m', f'{symbol.lower()}@kline_15m', f'{symbol.lower()}@kline_1h',
+                        f'{symbol.lower()}@kline_4h']
+        return streams
 
-        conn_key = bsm.start_multiplex_socket(streams, self.get_data)
+    def websocket_loop(self):
         try:
-            bsm.start()
+            self.bsm.start()
             while True:
                 time.sleep(1)
-        except KeyboardInterrupt as e:
-            bsm_tear_down(bsm, conn_key)
+        except Exception as e:
+            self.bsm_tear_down()
             raise e
+
+    def bsm_tear_down(self):
+        self.shutdown = True
+        self.bsm.stop_socket(self.conn_key)
+        reactor.stop()
 
 
 if __name__ == "__main__":

@@ -10,7 +10,6 @@ from flask import Flask, redirect, url_for, render_template, request, session, j
 import sqlite3
 
 import trader
-from signals_loop import MainLoop
 from charts import Charts
 from thread_manager import ThreadManager
 
@@ -19,18 +18,14 @@ os.chdir(file_path)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='log.log')
-# tr = None
-# trades = {}
 
 app = Flask('PerpSniper')
 tr = None
-signals_loop = None
 thread_manager = None
 
 
 def start_signals(*args):
     global tr
-    global signals_loop
     global thread_manager
     try:
         with open('log.log', 'r') as f:
@@ -41,7 +36,6 @@ def start_signals(*args):
     except FileNotFoundError:
         print('No log file to flush')
     thread_manager = ThreadManager()
-    signals_loop = thread_manager.signals
     tr = thread_manager.trader
 
 
@@ -50,7 +44,7 @@ def tear_down():
     print('app teardown completed')
 
 
-atexit.register(tear_down)
+# atexit.register(tear_down)
 
 # @app.before_first_request(start_signals)
 @app.route('/')
@@ -245,8 +239,5 @@ def server_time():
 
 if __name__ == '__main__':
     print(app.before_first_request_funcs)
-    try:
-        start_signals()
-        app.run(host='0.0.0.0', port=9000, use_reloader=False, debug=True)
-    except Exception as e:
-        signals_loop.teardown()
+    start_signals()
+    app.run(host='0.0.0.0', port=9000, use_reloader=False, debug=True)

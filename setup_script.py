@@ -6,11 +6,12 @@ import gunicorn.app.base
 from app import app, start_signals, tear_down
 from trader import Trader
 
+
 atexit.register(tear_down)
 
 
 def number_of_workers():
-    return (multiprocessing.cpu_count() * 2) + 1
+    return multiprocessing.cpu_count()
 
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):

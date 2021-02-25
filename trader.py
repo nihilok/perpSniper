@@ -203,14 +203,12 @@ class Trader:
             t = Trade(symbol,
                       direction,
                       quantity,
-                      approx_price,
                       float(self.settings['tp']),
                       float(self.settings['sl']),
                       float(self.settings['db']),
                       info,
                       self)
             self.open_trades[t.date] = t
-            self.open_positions_local.add(symbol)
         except (BinanceAPIException, BinanceOrderException) as e:
             raise e
 
