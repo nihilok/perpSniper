@@ -1,18 +1,14 @@
 import csv
-import getpass
 import json
 import os
-import sys
 import time
+import stdiomask
 from datetime import datetime
 from math import fabs
 from threading import Thread
-
-import stdiomask
 from binance.client import Client
 from binance.exceptions import BinanceAPIException, BinanceOrderException
 from binance.websockets import BinanceSocketManager
-from twisted.internet import reactor
 
 file_path = os.path.abspath(os.path.dirname(__file__))
 os.chdir(file_path)
@@ -21,22 +17,22 @@ data_path = os.path.join(data_path, 'data')
 
 
 def setup():
+    """Initial setup getting user input"""
     os.system('cls' if os.name == 'nt' else 'clear')
     print('Welcome to perpSniper v0.2 *alpha version, not financial advice, use at your own risk!')
     print('Initial setup needed....')
     print('\n\n\n\n')
-    settings = {}
-    settings['api_key'] = input('api_key: ')
-    settings['api_secret'] = stdiomask.getpass('api_secret: ')
-    settings['sl'] = float(input('stop loss percentage (price %, e.g. 0.5): '))/100
-    settings['tp'] = float(input('take profit percentage (price %, e.g. 2.5): '))/100
-    settings['db'] = float(input('trailing stop drawback (price %, e.g. 0.1): '))
-    settings['qty'] = float(input('percentage stake (margin balance %, e.g. 5: '))/100
+    settings = {'api_key': input('api_key: '), 'api_secret': stdiomask.getpass('api_secret: '),
+                'sl': float(input('stop loss percentage (price %, e.g. 0.5): ')) / 100,
+                'tp': float(input('take profit percentage (price %, e.g. 2.5): ')) / 100,
+                'db': float(input('trailing stop drawback (price %, e.g. 0.1): ')),
+                'qty': float(input('percentage stake (margin balance %, e.g. 5: ')) / 100}
     with open('settings.json', 'w') as f:
         json.dump(settings, f)
 
 
 def get_settings():
+    """Check for and get settings"""
     try:
         keycheck = ['api_key', 'api_secret', 'sl', 'tp', 'db', 'qty']
         # file_path = os.path.dirname(__file__)
@@ -51,11 +47,6 @@ def get_settings():
         print(e)
         setup()
         return get_settings()
-
-
-def tear_down(bsm, conn_key):
-    bsm.stop_socket(conn_key)
-    reactor.stop()
 
 
 class Trade:
@@ -73,7 +64,6 @@ class Trade:
         :param symbol: str denoting symbol pair to be traded, e.g. 'BTCUSDT'
         :param direction: bool indicating if trade direction is long (True) or short (False)
         :param quantity: float percentage of balance to be traded
-        :param approx_price: float approximate mark price at time of trade
         :param tp: float take profit activation price
         :param sl: float stop loss stop price
         :param db: float callback/drawback rate for trailing tp
@@ -105,13 +95,12 @@ class Trade:
         time.sleep(0.1)
         self.update_entry_price()
 
-
     def trade(self):
-        type = 'MARKET'
+        order_type = 'MARKET'
         side = 'BUY' if self.direction else 'SELL'
         try:
             self.client.futures_create_order(
-                type=type,
+                type=order_type,
                 side=side,
                 quantity=self.quantity,
                 symbol=self.symbol,
@@ -120,7 +109,7 @@ class Trade:
             raise e
 
     def take_profit(self):
-        type = 'TRAILING_STOP_MARKET'
+        order_type = 'TRAILING_STOP_MARKET'
         side = 'SELL' if self.direction else 'BUY'
         if self.direction:
             stop_price = float(self.price_decimals.format(self.price + (self.price * self.tp)))
@@ -128,7 +117,7 @@ class Trade:
             stop_price = float(self.price_decimals.format(self.price - (self.price * self.tp)))
         try:
             self.client.futures_create_order(
-                type=type,
+                type=order_type,
                 side=side,
                 quantity=self.quantity,
                 reduceOnly=True,
@@ -141,7 +130,7 @@ class Trade:
             raise e
 
     def stop_loss(self):
-        type = 'STOP_MARKET'
+        order_type = 'STOP_MARKET'
         side = 'SELL' if self.direction else 'BUY'
         if self.direction:
             stop_price = float(self.price_decimals.format(self.price - (self.price * self.sl)))
@@ -149,7 +138,7 @@ class Trade:
             stop_price = float(self.price_decimals.format(self.price + (self.price * self.sl)))
         try:
             self.client.futures_create_order(
-                type=type,
+                type=order_type,
                 side=side,
                 quantity=self.quantity,
                 reduceOnly=True,
@@ -159,15 +148,6 @@ class Trade:
             )
         except (BinanceAPIException, BinanceOrderException) as e:
             raise e
-
-
-class MyBinanceSocketManager(BinanceSocketManager):
-    def start_user_socket(self, callback):
-        """Start a websocket for user data"""
-        # Get the user listen key
-        user_listen_key = self._client.stream_get_listen_key()
-        # and start the socket with this specific key
-        return self._start_account_socket('userData', user_listen_key, callback)
 
 
 class Trader:
@@ -243,8 +223,8 @@ class Trader:
         affordable = usdt_bal / price
         qty = affordable * float(self.settings['qty']) * self.LEVERAGE
         info = [s for s in self.client.futures_exchange_info()['symbols'] if s['symbol'] == symbol][0]
-        qtyPrecision = info['quantityPrecision']
-        decimals = f'{{:.{qtyPrecision}f}}'
+        qty_precision = info['quantityPrecision']
+        decimals = f'{{:.{qty_precision}f}}'
         qty = float(decimals.format(qty))
         return qty, price, info
 
@@ -255,13 +235,13 @@ class Trader:
         for position in positions:
             if float(position['positionAmt']) > 0:
                 roe = (float(position['unrealizedProfit']) / (
-                        (float(position['positionAmt']) * float(position['entryPrice'])) / int(
-                    position['leverage']))) * 100
+                      (float(position['positionAmt']) * float(position['entryPrice'])) / int(
+                       position['leverage']))) * 100
                 direction = 'LONG'
             elif float(position['positionAmt']) < 0:
                 roe = -(float(position['unrealizedProfit']) / (
-                        (float(position['positionAmt']) * float(position['entryPrice'])) / int(
-                    position['leverage']))) * 100
+                       (float(position['positionAmt']) * float(position['entryPrice'])) / int(
+                        position['leverage']))) * 100
                 direction = 'SHORT'
             else:
                 continue

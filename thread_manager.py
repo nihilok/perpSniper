@@ -1,6 +1,6 @@
 from threading import Thread
 
-from coinData import CoinData
+from coin_data import CoinData
 from signals_loop import MainLoop, scheduler
 from trader import Trader
 
@@ -8,6 +8,9 @@ from trader import Trader
 class ThreadManager:
 
     def __init__(self):
+
+        """Construct all required instances and start threads"""
+
         try:
             self.trader = Trader()
             self.data = CoinData()
@@ -40,4 +43,3 @@ class ThreadManager:
     def stop_threads(self):
         for thread in self.threads:
             thread.join()
-

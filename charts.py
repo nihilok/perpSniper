@@ -14,7 +14,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 from matplotlib import pyplot as plt
 
-from coinData import CoinData
+from coin_data import CoinData
 
 plt.style.use('dark_background')
 
@@ -22,6 +22,11 @@ plt.style.use('dark_background')
 class Charts:
 
     def __init__(self, symbol='BTCUSDT', tf='1h', entry=None, direction=None):
+        """When initialised, creates chart for given symbol and timeframe
+        :param symbol: str uppercase eg. 'BTCUSDT'
+        :param tf: str lowercase eg. '1m', '15m', '1h', '4h'
+        :param entry: float if open positions
+        :param direction: str 'LONG', 'SHORT' or None depending on position"""
         self.symbol = symbol.upper()
         self.tf = tf
         self.df = CoinData.get_dataframe(self.symbol, self.tf)

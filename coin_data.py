@@ -1,9 +1,7 @@
 import csv
 import os
-import sys
 import time
-from datetime import datetime, timedelta
-from threading import Thread
+from datetime import datetime
 
 import pandas as pd
 from binance.client import Client
@@ -13,7 +11,7 @@ from twisted.internet import reactor
 from trader import Trader
 from utils import get_popular_coins
 
-client = Client(os.getenv('bbot_pub'), os.getenv('bbot_sec'))
+client = Trader().client
 file_path = os.path.abspath(os.path.dirname(__file__))
 os.chdir(file_path)
 
@@ -26,7 +24,7 @@ NUMBER_OF_SYMBOLS = 50
 
 class CoinData:
     def __init__(self):
-        """Get most popular symbols, download historical data, start live data web scoket"""
+        """Get most popular symbols, download historical data, start live data web socket"""
         print('Getting symbol list')
         self.symbols = get_popular_coins()[:NUMBER_OF_SYMBOLS]
         self.intervals = ['1m', '15m', '1h', '4h']

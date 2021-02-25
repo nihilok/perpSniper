@@ -13,7 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from binance.exceptions import BinanceAPIException
 
 from signals import Signals
-from coinData import CoinData
+from coin_data import CoinData
 
 
 scheduler = BackgroundScheduler()
@@ -38,9 +38,13 @@ logging.basicConfig(level=logging.DEBUG, filename='log.log')
 class MainLoop:
 
     def __init__(self, coin_data):
+
+        """Check signals for all coins passed from coin_data. Also includes tear down method and background tasks."""
+
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("15m, 1h & 4h signals update every minute to offer an early warning of events occuring on current (unclosed) candle's close. **Expect false positives**\nIf signals are still true they "
-              "are only repeated after 30 minutes\nHint: Look for volume signals to confirm other signals")
+        print('15m, 1h & 4h signals update every minute to offer an early warning of events occuring on current ('
+            'unclosed) candle\'s close. **Expect false positives**\nIf signals are still true they '
+            'are only repeated after 30 minutes\nHint: Look for volume signals to confirm other signals')
         self.data_lock = True
         self.data = coin_data
         self.coins = self.data.symbols

@@ -1,11 +1,10 @@
 import os
-from datetime import datetime
 import pandas as pd
 import pandas_ta as ta
 import numpy as np
 import scipy.signal
 from trader import Trader
-from coinData import CoinData
+from coin_data import CoinData
 
 client = Trader().client
 file_path = os.path.abspath(os.path.dirname(__file__))
@@ -15,6 +14,9 @@ os.chdir(file_path)
 class Signals:
 
     def __init__(self, symbol='BTCUSDT', tf='4h'):
+
+        """Check for signals for given symbol and timeframe"""
+
         self.symbol = symbol.upper()
         self.tf = tf
         self.df = CoinData.get_dataframe(symbol, tf)
@@ -107,15 +109,15 @@ class Signals:
 
         return self.rsi_div_dict, close_array, rsi_array, indices
 
-    def rsi_overbought_oversold(self, os=30, ob=70):
+    def rsi_overbought_oversold(self, o_s=30, o_b=70):
         rsi_array = self.df['rsi'].array
-        if rsi_array[-1] > os > rsi_array[-2]:
+        if rsi_array[-1] > o_s > rsi_array[-2]:
             self.rsi_ob_os_dict['oversold'] = True
-        elif rsi_array[-1] < ob < rsi_array[-2]:
+        elif rsi_array[-1] < o_b < rsi_array[-2]:
             self.rsi_ob_os_dict['overbought'] = True
         return self.rsi_ob_os_dict
 
-    def macd_signals(self, long=26, short=12, smoothing=9):
+    def macd_signals(self):
         if self.df['MACD_12_26_9'].array[-1] > self.df['MACDs_12_26_9'].array[-1]:
             if self.df['MACD_12_26_9'].array[-2] < self.df['MACDs_12_26_9'].array[-2]:
                 self.macd_dict['MACD cross'] = True
