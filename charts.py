@@ -42,8 +42,6 @@ class Charts:
         return df
 
     def main_chart(self):
-        # fig = Figure()
-        # spec = gridspec.GridSpec(ncols=1, nrows=3, figure=fig)
         fig, axes = plt.subplots(nrows=3, ncols=1, gridspec_kw={'height_ratios': [3, 1, 1]})
         fig.suptitle(f"{self.symbol} {self.tf}", fontsize=16)
         ax_r = axes[0].twinx()
@@ -76,9 +74,6 @@ class Charts:
         plt.tight_layout()
         fig.autofmt_xdate()
         self.df.volume = self.df.volume.div(2)
-        # axes[0].plot(self.df.index, self.df.ema_200)
-        # axes[0].plot(self.df.index, self.df.ema_50)
-        # axes[0].plot(self.df.index, self.df.ema_20)
         addplot_200 = mpf.make_addplot(self.df['ema_200'], type='line', ax=axes[0], width=1, color='#ff0066')
         addplot_50 = mpf.make_addplot(self.df['ema_50'], type='line', ax=axes[0], width=1, color='#00e600')
         mpf.plot(self.df, ax=axes[0], type="candle", style=s, volume=ax_r, ylabel='', addplot=[addplot_200, addplot_50])
