@@ -12,6 +12,7 @@ import sqlite3
 import trader
 from signals_loop import MainLoop
 from charts import Charts
+from thread_manager import ThreadManager
 
 file_path = os.path.abspath(os.path.dirname(__file__))
 os.chdir(file_path)
@@ -24,12 +25,13 @@ logging.basicConfig(filename='log.log')
 app = Flask('PerpSniper')
 tr = None
 signals_loop = None
-
+thread_manager = None
 
 
 def start_signals(*args):
     global tr
     global signals_loop
+    global thread_manager
     try:
         with open('log.log', 'r') as f:
             lines = f.readlines()
@@ -38,14 +40,13 @@ def start_signals(*args):
                 f.writelines(lines[-88:])
     except FileNotFoundError:
         print('No log file to flush')
-    tr = trader.Trader()
-    signals_loop = MainLoop()
-    jobs = [(tr.check_positions_cancel_open_orders, 'interval', 29)]
-    signals_loop.start_jobs(jobs=jobs)
+    thread_manager = ThreadManager()
+    signals_loop = thread_manager.signals
+    tr = thread_manager.trader
 
 
 def tear_down():
-    signals_loop.tear_down()
+    thread_manager.teardown()
     print('app teardown completed')
 
 

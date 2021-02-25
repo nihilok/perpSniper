@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import atexit
 import multiprocessing
 
 import gunicorn.app.base
-from app import app, start_signals
+from app import app, start_signals, tear_down
 from trader import Trader
+
+atexit.register(tear_down)
 
 
 def number_of_workers():

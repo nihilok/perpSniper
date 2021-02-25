@@ -37,12 +37,12 @@ logging.basicConfig(level=logging.DEBUG, filename='log.log')
 
 class MainLoop:
 
-    def __init__(self):
+    def __init__(self, coin_data):
         os.system('cls' if os.name == 'nt' else 'clear')
         print("15m, 1h & 4h signals update every minute to offer an early warning of events occuring on current (unclosed) candle's close. **Expect false positives**\nIf signals are still true they "
               "are only repeated after 30 minutes\nHint: Look for volume signals to confirm other signals")
         self.data_lock = True
-        self.data = CoinData()
+        self.data = coin_data
         self.coins = self.data.symbols
         print(f'''Current Symbols (highest volume):
 {', '.join(self.coins)}''')
@@ -234,21 +234,21 @@ class MainLoop:
                     scheduler.add_job(job[0], trigger=job[1], second=job[2])
 
 
-    def tear_down(self):
+    def teardown(self):
         self.close_database()
         scheduler.remove_all_jobs()
         scheduler.shutdown()
-        self.data.tear_down()
+        self.data.teardown()
         print('signals loop teardown completed')
 
 
-if __name__ == '__main__':
-    loop = MainLoop()
-    try:
-        loop.check_hot_coins()
-        loop.mainloop()
-        loop.start_jobs()
-        while True:
-            time.sleep(1)
-    finally:
-        loop.tear_down()
+# if __name__ == '__main__':
+#     loop = MainLoop()
+#     try:
+#         loop.check_hot_coins()
+#         loop.mainloop()
+#         loop.start_jobs()
+#         while True:
+#             time.sleep(1)
+#     finally:
+#         loop.teardown()

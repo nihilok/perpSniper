@@ -1,3 +1,4 @@
+import csv
 import getpass
 import json
 import os
@@ -15,6 +16,8 @@ from twisted.internet import reactor
 
 file_path = os.path.abspath(os.path.dirname(__file__))
 os.chdir(file_path)
+data_path = os.path.dirname(os.path.abspath(__file__))
+data_path = os.path.join(data_path, 'data')
 
 
 def setup():
@@ -60,7 +63,6 @@ class Trade:
                  symbol: str,
                  direction: bool,
                  quantity: float,
-                 approx_price: float,
                  tp: float,
                  sl: float,
                  db: float,
@@ -81,7 +83,7 @@ class Trade:
         self.date = datetime.now()
         self.symbol = symbol
         self.direction = direction
-        self.price = float(approx_price)
+        # self.price = float(approx_price)
         self.quantity = float(quantity)
         self.trader = trader
         self.client = trader.client
@@ -91,19 +93,18 @@ class Trade:
         self.db = float(db)
         self.price_decimals = f"{{:.{self.info['pricePrecision']}f}}"
         self.trade()
-        self.update_entry_price()
+        self.price = self.update_entry_price()
         self.stop_loss()
         self.take_profit()
 
     def update_entry_price(self):
-        found = False
         for position in self.trader.return_open_positions():
             if position['symbol'] == self.symbol:
-                found = True
                 self.price = position['entry']
-        if not found:
-            time.sleep(0.1)
-            self.update_entry_price()
+                return self.price
+        time.sleep(0.1)
+        self.update_entry_price()
+
 
     def trade(self):
         type = 'MARKET'
@@ -131,7 +132,6 @@ class Trade:
                 side=side,
                 quantity=self.quantity,
                 reduceOnly=True,
-                # closePosition=True,
                 workingType='MARK_PRICE',
                 symbol=self.symbol,
                 activationPrice=stop_price,
@@ -160,11 +160,10 @@ class Trade:
         except (BinanceAPIException, BinanceOrderException) as e:
             raise e
 
+
 class MyBinanceSocketManager(BinanceSocketManager):
     def start_user_socket(self, callback):
-        """Start a websocket for user data
-        """
-
+        """Start a websocket for user data"""
         # Get the user listen key
         user_listen_key = self._client.stream_get_listen_key()
         # and start the socket with this specific key
@@ -186,13 +185,6 @@ class Trader:
         self.client = Client(self.settings['api_key'], self.settings['api_secret'])
         self.server_time = datetime.fromtimestamp(self.return_server_time()).strftime('%H:%M:%S')
         self.bsm_1 = BinanceSocketManager(self.client)
-        # self.bsm_2 = MyBinanceSocketManager(self.client)
-        self.start_thread(self.get_symbol_info)
-        time.sleep(2)
-        # self.start_thread(self.user_socket)
-
-        self.open_positions_actual = self.positions_set()
-        self.open_positions_local = self.open_positions_actual
 
     def start_thread(self, func):
         t = Thread(target=func)
@@ -222,22 +214,13 @@ class Trader:
         except (BinanceAPIException, BinanceOrderException) as e:
             raise e
 
-    def get_mark_prices(self, msg):
-        for symbol in msg['data']:
-            if symbol['e'] == 'markPriceUpdate':
-                last_price = float(symbol['p'])
-                self.mark_prices[symbol['s']] = last_price
-
-    def get_symbol_info(self):
-        # noinspection PyTypeChecker
-        conn_key = self.bsm_1.start_all_mark_price_socket(self.get_mark_prices)
-        try:
-            self.bsm_1.start()
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt as e:
-            tear_down(self.bsm_1, conn_key)
-            sys.exit()
+    @staticmethod
+    def get_price(symbol):
+        filename = os.path.join(data_path, symbol + '-1m.csv')
+        with open(filename, 'r') as f:
+            reader = csv.reader(f)
+            price = [row for row in reader][-1][-2]
+        return price
 
     def get_account_info(self):
         ac_info = self.client.futures_account()
@@ -257,7 +240,7 @@ class Trader:
         return float(self.get_account_info()['balance'])
 
     def calculate_max_qty(self, symbol):
-        price = float(self.mark_prices[symbol])
+        price = float(self.get_price(symbol))
         usdt_bal = self.get_usdt_balance()
         affordable = usdt_bal / price
         qty = affordable * float(self.settings['qty']) * self.LEVERAGE
@@ -347,4 +330,4 @@ class Trader:
 
 
 if __name__ == '__main__':
-    t = Trader()
+    print(Trader.get_price('BTCUSDT'))

@@ -21,7 +21,7 @@ data_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(data_path, 'data')
 
 
-NUMBER_OF_SYMBOLS = 50
+NUMBER_OF_SYMBOLS = 5
 
 
 def bsm_tear_down(bsm, conn_key):
@@ -31,8 +31,6 @@ def bsm_tear_down(bsm, conn_key):
 
 class CoinData:
     def __init__(self):
-        self.threads = []
-        self.exiting = False
         print('Getting symbol list')
         self.symbols = get_popular_coins()[:NUMBER_OF_SYMBOLS]
         self.intervals = ['1m', '15m', '1h', '4h']
@@ -46,14 +44,6 @@ class CoinData:
                 self.latest_klines[s][interval] = {}
         print('Downloading symbol data')
         self.get_original_data()
-        t = Thread(target=self.websocket_loop)
-        # t.setDaemon(True)
-        t.start()
-        self.threads.append(t)
-        print('Websocket started')
-        self.bj_started = True
-        time.sleep(3)
-        print('CoinData ready...')
         self.tf_dict = {
             '1m': 1,
             '15m': 15,
@@ -151,20 +141,10 @@ class CoinData:
         try:
             bsm.start()
             while True:
-                if self.exiting:
-                    break
                 time.sleep(1)
         except KeyboardInterrupt as e:
             bsm_tear_down(bsm, conn_key)
             raise e
-
-    def tear_down(self):
-        self.exiting = True
-        for t in self.threads:
-            t.join()
-        print('coinData threads joined')
-        sys.exit()
-
 
 
 if __name__ == "__main__":
