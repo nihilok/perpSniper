@@ -11,7 +11,7 @@
 ## Installation:
 You will need your Binance api keys. It is recommended to enable IP restriction when setting up keys unless you trust me not to have included a secret script to steal your API keys (I haven't.... or have I??? I haven't but just use the restriction anyway)! From the command line run:
 
-`python setup_script.py`
+`python main.py`
 
 Use the same command to run the server each time and then log on via your browser to the local IP of the server or localhost with pot 8080 (e.g 192.168.0.10:8080 for different PC or smartphone or 127.0.0.1:8080 (localhost) for same PC as server is running from.)
 
