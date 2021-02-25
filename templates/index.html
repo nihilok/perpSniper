@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css')}}">
+</head>
+<body>
+<div class="container pt-10 pb-5 text-center">
+  <h1 class="text-2xl font-semibold pb-5">{{title}}</h1>
+  <div class="flex flex-col items-center justify-center space-y-4 w-screen md:w-1/2 mt-3 mx-auto">
+    <!--    <form class="">-->
+    <input type="text" id="coinInput"
+           class="w-64 text-center border-2 border-gray-300 text-4xl rounded shadow-inner focus:outline-none focus:ring focus:border-2 focus:border-blue-300">
+    <div class="flex items-center justify-center space-x-4">
+      <div onclick="openLong()"
+           class="flex items-center justify-center text-2xl text-white font-bold cursor-pointer bg-green-500 hover:bg-green-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-32">
+        LONG
+      </div>
+      <div onclick="openShort()"
+           class="flex items-center justify-center text-2xl text-white font-bold cursor-pointer bg-red-500 hover:bg-red-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-32">
+        SHORT
+      </div>
+    </div>
+    <!--    </form>-->
+  </div>
+  {% block content %}
+  <div class="flex flex-col md:flex-row items-center md:items-start md:justify-center h-2/3 space-y-4 md:space-y-0 md:space-x-4 mt-5">
+    <div onclick="loadUrl('../signals')"
+         class="flex items-center justify-center text-xl text-white font-semibold cursor-pointer bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-sm rounded-xl h-10 w-24">
+      Signals
+    </div>
+    <div onclick="loadUrl('../settings')"
+         class="flex items-center justify-center text-xl text-white font-semibold cursor-pointer bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-sm rounded-xl h-10 w-24">
+      Settings
+    </div>
+    <div onclick="shutDown()"
+         class="flex items-center justify-center text-xl text-white font-semibold cursor-pointer bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-sm rounded-xl h-10 w-24">
+      Shutdown
+    </div>
+  </div>
+  {% endblock %}
+  <script type="text/javascript" src="{{ url_for('static', filename='js/index.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="flex flex-col md:flex-row items-center md:items-start md:justify-center h-2/3 space-y-4 md:space-x-4 mt-5">
+  <form method="POST" id="settingsForm">
+    <table class="">
+      <tr>
+        <td>
+          <label for="SL" class="">Stop Loss</label>
+        </td>
+        <td>
+          <input name="SL" id="SL" type="number" step=".1"
+                 class="px-3 ml-5 w-24 text-center border-2 border-gray-300 text-4xl rounded shadow-inner focus:outline-none focus:ring focus:border-2 focus:border-blue-300">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label for="TP" class="">Take Profit</label>
+        </td>
+        <td>
+          <input name="TP" id="TP" type="number" step=".5"
+                 class="px-3 ml-5 w-24 text-center border-2 border-gray-300 text-4xl rounded shadow-inner focus:outline-none focus:ring focus:border-2 focus:border-blue-300">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label for="DB" class="">Drawback</label>
+        </td>
+        <td>
+          <input name="DB" id="DB" type="number" step=".1"
+                 class="px-3 ml-5 w-24 text-center border-2 border-gray-300 text-4xl rounded shadow-inner focus:outline-none focus:ring focus:border-2 focus:border-blue-300">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label for="QTY" class="">Quantity (%)</label>
+        </td>
+        <td>
+          <input name="QTY" id="QTY" type="number" step=".5"
+                 class="px-3 ml-5 w-24 text-center border-2 border-gray-300 text-4xl rounded shadow-inner focus:outline-none focus:ring focus:border-2 focus:border-blue-300">
+        </td>
+      </tr>
+    </table>
+    <div id="submitBtn"
+         class="mx-auto mt-5 flex items-center justify-center text-2xl text-white font-bold bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-sm rounded-xl h-16 w-32">
+      SAVE
+    </div>
+  </form>
+</div>
+<script type="text/javascript">
+  window.addEventListener("DOMContentLoaded", function () {
+    var form = document.getElementById("settingsForm");
+
+    document.getElementById("submitBtn").addEventListener("click", function () {
+      form.submit();
+    });
+  });
+</script>
+{% endblock %}

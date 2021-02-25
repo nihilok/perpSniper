@@ -1,0 +1,15 @@
+{
+  "name": "perp_sniper",
+  "version": "0.1.1",
+  "description": "trading tool",
+  "main": "index.js",
+  "scripts": {
+    "build": "tailwind build src/tailwind_src.css -o css/tailwind.css"
+  },
+  "author": "TokenBlack",
+  "license": "ISC",
+  "dependencies": {
+    "autoprefixer": "^10.2.4",
+    "tailwindcss": "^2.0.3"
+  }
+}
