@@ -79,8 +79,12 @@ class AlgoTrader:
                     print(alert)
         print('short_condition checked')
 
+    def save_data(self):
+        self.data.save_latest_data()
+        print('latest data saved')
+
     def schedule_tasks(self):
-        self.scheduler.add_job(self.data.save_latest_data, trigger='cron', minute='*/1', second="58")
+        self.scheduler.add_job(self.save_data, trigger='cron', minute='*/1', second="58")
         self.scheduler.add_job(self.long_condition, trigger='cron', minute='*/1')
         self.scheduler.add_job(self.short_condition, trigger='cron', minute='*/1')
         self.scheduler.start()
