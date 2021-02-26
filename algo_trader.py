@@ -69,14 +69,12 @@ class AlgoTrader:
             if self.trend_markers[symbol][1]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['oversold'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bullish divergence']:
                     alert = f'LONG {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
-                    if not alert in {alert[0] for alert in self.recent_alerts}:
+                    if alert not in {alert[0] for alert in self.recent_alerts}:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         print(alert)
                         self.trader.trade(symbol, 'LONG')
                         self.recent_alerts.append((alert, datetime.now()))
-        print('long_condition checked')
-        self.purge_alerts()
         return True
 
     async def short_condition(self):
@@ -86,13 +84,12 @@ class AlgoTrader:
             if not self.trend_markers[symbol][1]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bearish divergence']:
                     alert = f'SHORT {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
-                    if not alert in {alert[0] for alert in self.recent_alerts}:
+                    if alert not in {alert[0] for alert in self.recent_alerts}:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         print(alert)
                         self.trader.trade(symbol, 'SHORT')
                         self.recent_alerts.append((alert, datetime.now()))
-        print('short_condition checked')
         self.purge_alerts()
         return True
 
@@ -114,7 +111,6 @@ class AlgoTrader:
 
     def save_data(self):
         self.data.save_latest_data()
-        print('latest data saved')
 
     def schedule_tasks(self):
         self.scheduler.add_job(self.save_data, trigger='cron', minute='*/1', second="58")
