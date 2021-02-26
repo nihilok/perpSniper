@@ -1,11 +1,8 @@
-import logging
 import asyncio
 import time
 from datetime import datetime, timedelta
-from threading import Thread
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers.blocking import BlockingScheduler
 
 from trader import Trader, Trade
 from coin_data import CoinData
@@ -70,11 +67,12 @@ class AlgoTrader:
             if self.trend_markers[symbol][1] and self.trend_markers[symbol][2]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['oversold'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bullish divergence']:
                     alert = f'LONG {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
-                    if alert not in {alert[0] for alert in self.recent_alerts}:
+                    if alert not in [alert[0] for alert in self.recent_alerts]:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         self.recent_alerts.append((alert, datetime.now()))
                         self.trader.trade(symbol, True)
+
                         print(alert)
         return True
 
@@ -86,7 +84,7 @@ class AlgoTrader:
             if not self.trend_markers[symbol][1] and not self.trend_markers[symbol][2]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bearish divergence']:
                     alert = f'SHORT {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
-                    if alert not in {alert[0] for alert in self.recent_alerts}:
+                    if alert not in [alert[0] for alert in self.recent_alerts]:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         self.recent_alerts.append((alert, datetime.now()))
