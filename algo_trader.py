@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Thread
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -28,6 +28,7 @@ class AlgoTrader:
         self.get_signals()
         self.check_emas()
         self.event_loop = None
+        self.recent_alerts = []
 
     def get_signals(self):
         inadequate_symbols = []
@@ -64,10 +65,13 @@ class AlgoTrader:
             if self.trend_markers[symbol][1]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['oversold'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bullish divergence']:
                     alert = f'LONG {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
-                    with open('buys.txt', 'a') as f:
-                        f.write(alert)
-                    print(alert)
+                    if not alert in {alert[0] for alert in self.recent_alerts}:
+                        with open('buys.txt', 'a') as f:
+                            f.write(alert)
+                        print(alert)
+                        self.recent_alerts.append((alert, datetime.now()))
         print('long_condition checked')
+        self.purge_alerts()
         return True
 
     async def short_condition(self):
@@ -77,11 +81,22 @@ class AlgoTrader:
             if not self.trend_markers[symbol][1]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bearish divergence']:
                     alert = f'SHORT {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
-                    with open('buys.txt', 'a') as f:
-                        f.write(alert)
-                    print(alert)
+                    if not alert in {alert[0] for alert in self.recent_alerts}:
+                        with open('buys.txt', 'a') as f:
+                            f.write(alert)
+                        print(alert)
+                        self.recent_alerts.append((alert, datetime.now()))
         print('short_condition checked')
+        self.purge_alerts()
         return True
+
+    def purge_alerts(self):
+        old_alerts = []
+        for alert in self.recent_alerts:
+            if alert[1] < datetime.now() - timedelta(minutes=15):
+                old_alerts.append(alert)
+        for alert in old_alerts:
+            self.recent_alerts.remove(alert)
 
     async def check_conditions(self):
         l = self.event_loop.create_task(self.long_condition())
