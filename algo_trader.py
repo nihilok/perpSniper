@@ -24,7 +24,6 @@ class AlgoTrader:
     def __init__(self):
         self.signals_dict = {}
         self.trend_markers = {}
-        print(', '.join(self.data.symbols))
         self.get_signals()
         self.check_emas()
         self.event_loop = None
@@ -110,7 +109,7 @@ class AlgoTrader:
         self.scheduler.remove_all_jobs()
         self.scheduler.shutdown()
 
-    async def loop(self):
+    def loop(self):
         try:
             self.schedule_tasks()
             while True:
