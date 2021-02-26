@@ -99,6 +99,7 @@ class CoinData:
                             continue
                         else:
                             raise e
+            print('created tables for ' + ', '.join(self.symbols))
         finally:
             conn.commit()
             conn.close()

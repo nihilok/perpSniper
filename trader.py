@@ -199,7 +199,7 @@ class Trader:
         c = conn.cursor()
         try:
             q = f'SELECT * FROM {symbol}_1m WHERE date = (SELECT MAX(date) FROM {symbol}_1m)'
-            price = c.execute(q).fetchone()[0]
+            price = c.execute(q).fetchone()[3]
         finally:
             conn.close()
         return price

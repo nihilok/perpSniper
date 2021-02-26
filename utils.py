@@ -2,6 +2,8 @@ import time
 from threading import Thread
 
 from binance.websockets import BinanceSocketManager
+from twisted.internet import reactor
+
 import trader as tr
 
 t = tr.Trader()
@@ -81,22 +83,16 @@ def ticker_websocket_loop():
     data = bsm.start_ticker_socket(live_vol_data)
     try:
         bsm.start()
-        while True:
-            time.sleep(1)
-    except Exception as e:
-        ls.bsm_tear_down(bsm, data)
-        raise e
-
-
-def get_popular_coins():
-    if not len(local_tickers):
-        t = Thread(target=ticker_websocket_loop)
-        t.setDaemon(True)
-        t.start()
         while not len(local_tickers):
             time.sleep(1)
+    finally:
+        bsm.stop_socket(data)
+
+def get_popular_coins():
+    ticker_websocket_loop()
     tickers = local_tickers
-    sorted_tickers_list = [ticker[0] for ticker in sorted(tickers.items(), key=lambda ticker: float(ticker[1]))[-60:]]
+    sorted_tickers_list = [ticker[0] for ticker in sorted(tickers.items(), key=lambda ticker: float(ticker[1]))]
+    print('found ' + str(len(sorted_tickers_list)) + ' symbols')
     return list(reversed(sorted_tickers_list))
 
 

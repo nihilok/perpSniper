@@ -60,22 +60,22 @@ class AlgoTrader:
         self.check_emas()
         for symbol in self.signals_dict.keys():
             if self.trend_markers[symbol][2] and self.trend_markers[symbol][1]:
-                if self.signals_dict[symbol][0].rsi_ob_os_dict['oversold']:
-                    buy = f'BUY {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
+                if self.signals_dict[symbol][0].rsi_ob_os_dict['oversold'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bullish divergence']:
+                    alert = f'LONG {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
                     with open('buys.txt', 'a') as f:
-                        f.write(buy)
-                    print(buy)
+                        f.write(alert)
+                    print(alert)
 
     def short_condition(self):
         self.get_signals()
         self.check_emas()
         for symbol in self.signals_dict.keys():
             if not self.trend_markers[symbol][2] and not self.trend_markers[symbol][1]:
-                if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought']:
-                    sell = f'SELL {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
+                if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bearish divergence']:
+                    alert = f'SHORT {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
                     with open('buys.txt', 'a') as f:
-                        f.write(sell)
-                    print(sell)
+                        f.write(alert)
+                    print(alert)
 
     def schedule_tasks(self):
         self.scheduler.add_job(self.long_condition, trigger='cron', minute='*/5')
