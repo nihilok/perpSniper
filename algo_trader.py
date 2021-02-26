@@ -117,7 +117,7 @@ if __name__ == '__main__':
         at.schedule_tasks()
         while True:
             at.start_async()
-            asyncio.sleep(60)
+            await asyncio.sleep(60)
     except KeyboardInterrupt as e:
         at.stop_tasks()
         raise e
