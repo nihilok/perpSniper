@@ -26,7 +26,7 @@ class CoinData:
     def __init__(self):
         """Get most popular symbols, download historical data, start live data web socket"""
         print('Getting symbol list')
-        self.symbols = get_popular_coins()[:NUMBER_OF_SYMBOLS]
+        self.symbols = get_popular_coins()  # [:NUMBER_OF_SYMBOLS]
         self.intervals = ['1m', '15m', '1h', '4h']
         self.latest_klines = {}
         self.data_dict = {}
@@ -70,6 +70,7 @@ class CoinData:
         return df
 
     def save_new_data(self):
+        # TODO: save data to signals.db (create table symbol_data)
         for symbol in self.symbols:
             for interval in self.intervals:
                 filename = os.path.join(data_path, symbol + f'-{interval}' + '.csv')
