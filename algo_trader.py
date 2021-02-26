@@ -110,14 +110,17 @@ class AlgoTrader:
         self.scheduler.remove_all_jobs()
         self.scheduler.shutdown()
 
+    async def loop(self):
+        try:
+            self.schedule_tasks()
+            while True:
+                self.start_async()
+                await asyncio.sleep(60)
+        except KeyboardInterrupt as e:
+            self.stop_tasks()
+            raise e
+
 
 if __name__ == '__main__':
     at = AlgoTrader()
-    try:
-        at.schedule_tasks()
-        while True:
-            at.start_async()
-            await asyncio.sleep(60)
-    except KeyboardInterrupt as e:
-        at.stop_tasks()
-        raise e
+    at.loop()
