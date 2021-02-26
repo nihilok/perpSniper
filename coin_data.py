@@ -2,7 +2,7 @@ import csv
 import os
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Thread
 
 import pandas as pd
@@ -52,7 +52,6 @@ class CoinData:
         self.t.setDaemon(True)
         self.t.start()
         self.create_database()
-        self.save_original_data()
         print('Coin data initialized')
 
     def get_data(self, msg):
@@ -78,31 +77,42 @@ class CoinData:
             df.rename_axis('date', inplace=True)
         finally:
             conn.close()
-
         return df
 
     def create_database(self):
-        conn = sqlite3.connect('symbols.db')
-        cursor = conn.cursor()
-        try:
-            for symbol in self.symbols:
-                for interval in self.intervals:
-                    safe_symbol = self.check_symbol(symbol)
-                    query = f'CREATE TABLE {safe_symbol}_{interval} (date datetime, open dec(6, 8), ' \
-                            f'high dec(6, 8), low dec(6, ' \
-                            f'8), close dec(' \
-                            f'6, 8), volume dec(12, 2))'
-                    try:
-                        cursor.execute(query)
-                    except sqlite3.OperationalError as e:
-                        if str(e)[-6:] == 'exists':
-                            continue
-                        else:
-                            raise e
-            print('created tables for ' + ', '.join(self.symbols))
-        finally:
-            conn.commit()
-            conn.close()
+        query = f'SELECT MAX(date) FROM BTCUSDT_15m'
+        if os.path.isfile('symbols.db'):
+            conn = sqlite3.connect('symbols.db')
+            cursor = conn.cursor()
+            time = cursor.execute(query).fetchone()[0]
+            if time and datetime.strptime(time, '%Y-%m-%d %H:%M:%S') >= datetime.now() - timedelta(minutes=15):
+                return
+            else:
+                os.remove('symbols.db')
+                self.create_database()
+        else:
+            conn = sqlite3.connect('symbols.db')
+            cursor = conn.cursor()
+            try:
+                for symbol in self.symbols:
+                    for interval in self.intervals:
+                        safe_symbol = self.check_symbol(symbol)
+                        query = f'CREATE TABLE {safe_symbol}_{interval} (date datetime, open dec(6, 8), ' \
+                                f'high dec(6, 8), low dec(6, ' \
+                                f'8), close dec(' \
+                                f'6, 8), volume dec(12, 2))'
+                        try:
+                            cursor.execute(query)
+                        except sqlite3.OperationalError as e:
+                            if str(e)[-6:] == 'exists':
+                                continue
+                            else:
+                                raise e
+                print('created tables for ' + ', '.join(self.symbols))
+                self.save_original_data()
+            finally:
+                conn.commit()
+                conn.close()
 
     def check_symbol(self, symbol):
         safe_symbol = symbol
