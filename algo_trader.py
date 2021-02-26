@@ -27,8 +27,7 @@ class AlgoTrader:
         print(', '.join(self.data.symbols))
         self.get_signals()
         self.check_emas()
-        self.event_loop = asyncio.get_event_loop()
-
+        self.event_loop = None
 
     def get_signals(self):
         inadequate_symbols = []
@@ -90,7 +89,13 @@ class AlgoTrader:
         await asyncio.wait([l,s])
 
     def start_async(self):
-        self.event_loop.run_until_complete(self.check_conditions())
+        try:
+            self.event_loop = asyncio.get_event_loop()
+            self.event_loop.run_until_complete(self.check_conditions())
+        except Exception as e:
+            pass
+        finally:
+            self.event_loop.close()
 
     def save_data(self):
         self.data.save_latest_data()
@@ -108,8 +113,7 @@ class AlgoTrader:
 
 if __name__ == '__main__':
     at = AlgoTrader()
-    at.long_condition()
-    at.short_condition()
+    at.start_async()
     try:
         at.schedule_tasks()
     except KeyboardInterrupt as e:
