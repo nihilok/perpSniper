@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from datetime import datetime
 from threading import Thread
 
@@ -26,6 +27,7 @@ class AlgoTrader:
         print(', '.join(self.data.symbols))
         self.get_signals()
         self.check_emas()
+        self.event_loop = asyncio.get_event_loop()
 
     def get_signals(self):
         inadequate_symbols = []
@@ -55,7 +57,7 @@ class AlgoTrader:
             self.trend_markers[symbol] = (m15, h1, h4)
         return self.trend_markers
 
-    def long_condition(self):
+    async def long_condition(self):
         self.get_signals()
         self.check_emas()
         for symbol in self.signals_dict.keys():
@@ -66,8 +68,9 @@ class AlgoTrader:
                         f.write(alert)
                     print(alert)
         print('long_condition checked')
+        return True
 
-    def short_condition(self):
+    async def short_condition(self):
         self.get_signals()
         self.check_emas()
         for symbol in self.signals_dict.keys():
@@ -78,6 +81,15 @@ class AlgoTrader:
                         f.write(alert)
                     print(alert)
         print('short_condition checked')
+        return True
+
+    async def check_conditions(self):
+        l = self.event_loop.create_task(self.long_condition())
+        s = self.event_loop.create_task(self.short_condition())
+        await asyncio.wait([l,s])
+
+    def start_async(self):
+        self.event_loop.run_until_complete(self.check_conditions())
 
     def save_data(self):
         self.data.save_latest_data()
