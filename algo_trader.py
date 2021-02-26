@@ -65,6 +65,7 @@ class AlgoTrader:
                     with open('buys.txt', 'a') as f:
                         f.write(alert)
                     print(alert)
+        print('long_condition checked')
 
     def short_condition(self):
         self.get_signals()
@@ -76,10 +77,12 @@ class AlgoTrader:
                     with open('buys.txt', 'a') as f:
                         f.write(alert)
                     print(alert)
+        print('short_condition checked')
 
     def schedule_tasks(self):
-        self.scheduler.add_job(self.long_condition, trigger='cron', minute='*/5')
-        self.scheduler.add_job(self.short_condition, trigger='cron', minute='*/5')
+        self.scheduler.add_job(self.data.save_latest_data, trigger='cron', minute='*/1', second="58")
+        self.scheduler.add_job(self.long_condition, trigger='cron', minute='*/1')
+        self.scheduler.add_job(self.short_condition, trigger='cron', minute='*/1')
         self.scheduler.start()
 
     def stop_tasks(self):
