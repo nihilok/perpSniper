@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import sqlite3
 import time
 import stdiomask
 from datetime import datetime
@@ -194,10 +195,13 @@ class Trader:
 
     @staticmethod
     def get_price(symbol):
-        filename = os.path.join(data_path, symbol + '-1m.csv')
-        with open(filename, 'r') as f:
-            reader = csv.reader(f)
-            price = [row for row in reader][-1][-2]
+        conn = sqlite3.connect('symbols.db')
+        c = conn.cursor()
+        try:
+            q = f'SELECT * FROM {symbol}_1m WHERE date = (SELECT MAX(date) FROM {symbol}_1m)'
+            price = c.execute(q).fetchone()[0]
+        finally:
+            conn.close()
         return price
 
     def get_account_info(self):

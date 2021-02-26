@@ -226,7 +226,7 @@ class MainLoop:
         """:param jobs: list of tuples (job, trigger, interval)"""
         scheduler.start()
         scheduler.add_job(self.mainloop, trigger="cron", minute='*/1')
-        scheduler.add_job(self.get_popular_coins, trigger="cron", hour='*/1')
+        # scheduler.add_job(self.get_popular_coins, trigger="cron", hour='*/1')
         if jobs:
             for job in jobs:
                 if job[1] == 'interval':
