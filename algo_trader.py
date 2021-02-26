@@ -97,7 +97,7 @@ class AlgoTrader:
 
     def schedule_tasks(self):
         self.scheduler.add_job(self.save_data, trigger='cron', minute='*/1', second="58")
-        # self.scheduler.add_job(self.start_async, trigger='cron', minute='*/1')
+        self.scheduler.add_job(self.start_async, trigger='cron', minute='*/1')
         self.scheduler.start()
 
     def stop_tasks(self):
@@ -106,14 +106,13 @@ class AlgoTrader:
 
     def loop(self):
         try:
-            self.schedule_tasks()
             self.event_loop = asyncio.get_event_loop()
+            self.schedule_tasks()
             while True:
-                self.start_async()
-                time.sleep(60)
+                time.sleep(1)
         except KeyboardInterrupt as e:
-            self.event_loop.close()
             self.stop_tasks()
+            self.event_loop.close()
             raise e
 
 
