@@ -29,6 +29,7 @@ class AlgoTrader:
         self.check_emas()
         self.event_loop = asyncio.get_event_loop()
 
+
     def get_signals(self):
         inadequate_symbols = []
         for symbol in self.data.symbols:
@@ -97,8 +98,7 @@ class AlgoTrader:
 
     def schedule_tasks(self):
         self.scheduler.add_job(self.save_data, trigger='cron', minute='*/1', second="58")
-        self.scheduler.add_job(self.long_condition, trigger='cron', minute='*/1')
-        self.scheduler.add_job(self.short_condition, trigger='cron', minute='*/1')
+        self.scheduler.add_job(self.start_async, trigger='cron', minute='*/1')
         self.scheduler.start()
 
     def stop_tasks(self):
