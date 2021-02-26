@@ -71,7 +71,8 @@ class AlgoTrader:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         self.recent_alerts.append((alert, datetime.now()))
-                        self.trader.trade(symbol, True)
+                        if symbol not in [position['symbol'] for position in self.trader.return_open_positions()]:
+                            self.trader.trade(symbol, True)
 
                         print(alert)
         return True
@@ -88,7 +89,8 @@ class AlgoTrader:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         self.recent_alerts.append((alert, datetime.now()))
-                        self.trader.trade(symbol, False)
+                        if symbol not in [position['symbol'] for position in self.trader.return_open_positions()]:
+                            self.trader.trade(symbol, False)
                         print(alert)
         return True
 
