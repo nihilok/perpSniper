@@ -29,6 +29,10 @@ class AlgoTrader:
         self.check_emas()
         self.event_loop = None
         self.recent_alerts = []
+        self.trader = Trader()
+        self.trader.settings['sl'] = 0.005
+        self.trader.settings['tp'] = 0.02
+        self.trader.settings['qty'] = 0.01
 
     def get_signals(self):
         inadequate_symbols = []
@@ -69,6 +73,7 @@ class AlgoTrader:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         print(alert)
+                        self.trader.trade(symbol, 'LONG')
                         self.recent_alerts.append((alert, datetime.now()))
         print('long_condition checked')
         self.purge_alerts()
@@ -85,6 +90,7 @@ class AlgoTrader:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         print(alert)
+                        self.trader.trade(symbol, 'SHORT')
                         self.recent_alerts.append((alert, datetime.now()))
         print('short_condition checked')
         self.purge_alerts()
