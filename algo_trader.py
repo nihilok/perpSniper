@@ -63,6 +63,7 @@ class AlgoTrader:
         return self.trend_markers
 
     async def long_condition(self):
+        self.purge_alerts()
         self.get_signals()
         self.check_emas()
         for symbol in self.signals_dict.keys():
@@ -72,12 +73,13 @@ class AlgoTrader:
                     if alert not in {alert[0] for alert in self.recent_alerts}:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
-                        print(alert)
-                        self.trader.trade(symbol, True)
                         self.recent_alerts.append((alert, datetime.now()))
+                        self.trader.trade(symbol, True)
+                        print(alert)
         return True
 
     async def short_condition(self):
+        self.purge_alerts()
         self.get_signals()
         self.check_emas()
         for symbol in self.signals_dict.keys():
@@ -87,10 +89,9 @@ class AlgoTrader:
                     if alert not in {alert[0] for alert in self.recent_alerts}:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
-                        print(alert)
-                        self.trader.trade(symbol, False)
                         self.recent_alerts.append((alert, datetime.now()))
-        self.purge_alerts()
+                        self.trader.trade(symbol, False)
+                        print(alert)
         return True
 
     def purge_alerts(self):
