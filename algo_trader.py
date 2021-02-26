@@ -89,13 +89,7 @@ class AlgoTrader:
         await asyncio.wait([l,s])
 
     def start_async(self):
-        try:
-            self.event_loop = asyncio.get_event_loop()
-            self.event_loop.run_until_complete(self.check_conditions())
-        except Exception as e:
-            pass
-        finally:
-            self.event_loop.close()
+        self.event_loop.run_until_complete(self.check_conditions())
 
     def save_data(self):
         self.data.save_latest_data()
@@ -113,10 +107,12 @@ class AlgoTrader:
     def loop(self):
         try:
             self.schedule_tasks()
+            self.event_loop = asyncio.get_event_loop()
             while True:
                 self.start_async()
                 time.sleep(60)
         except KeyboardInterrupt as e:
+            self.event_loop.close()
             self.stop_tasks()
             raise e
 
