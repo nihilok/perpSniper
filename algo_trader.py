@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import time
 from datetime import datetime
 from threading import Thread
 
@@ -114,7 +115,7 @@ class AlgoTrader:
             self.schedule_tasks()
             while True:
                 self.start_async()
-                await asyncio.sleep(60)
+                time.sleep(60)
         except KeyboardInterrupt as e:
             self.stop_tasks()
             raise e
