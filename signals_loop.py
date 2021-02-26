@@ -48,8 +48,6 @@ class MainLoop:
         self.data_lock = True
         self.data = coin_data
         self.coins = self.data.symbols
-        print(f'''Current Symbols (highest volume):
-{', '.join(self.coins)}''')
         try:
             self.conn = self.open_database()
             self.flush_db()
@@ -225,11 +223,10 @@ class MainLoop:
                 self.register_alert(alert, coin, signals_obj.tf)
 
     def start_jobs(self, jobs=None):
-        """@param jobs: list of tuples (job, trigger, interval)"""
+        """:param jobs: list of tuples (job, trigger, interval)"""
         scheduler.start()
         scheduler.add_job(self.mainloop, trigger="cron", minute='*/1')
         scheduler.add_job(self.get_popular_coins, trigger="cron", hour='*/1')
-        scheduler.add_job(self.data.save_new_data, trigger="interval", seconds=2)
         if jobs:
             for job in jobs:
                 if job[1] == 'interval':

@@ -14,10 +14,11 @@ class AlgoTrader:
 
     """Check each coin for signals and make trades in certain conditions.
     Conditions:
-    - 15m RSI oversold and 4h ema_50 above ema_200"""
+    - 15m RSI oversold, macd crossing up and 4h&1h ema_50 above ema_200"""
 
     data = CoinData()
     trader = Trader()
+    scheduler = BackgroundScheduler()
 
     def __init__(self):
         self.signals_dict = {}
@@ -25,13 +26,12 @@ class AlgoTrader:
         print(', '.join(self.data.symbols))
         self.get_signals()
         self.check_emas()
-        self.data_thread = Thread(target=self.data.websocket_loop)
 
     def get_signals(self):
         inadequate_symbols = []
         for symbol in self.data.symbols:
             try:
-                self.signals_dict[symbol] = (Signals(symbol, '1m'),
+                self.signals_dict[symbol] = (   # Signals(symbol, '1m'),
                                              Signals(symbol, '15m'),
                                              Signals(symbol, '1h'),
                                              Signals(symbol, '4h'))
@@ -44,36 +44,55 @@ class AlgoTrader:
 
     def check_emas(self):
         for symbol in self.data.symbols:
-            signals_1m = self.signals_dict[symbol][0]
-            signals_15m = self.signals_dict[symbol][1]
-            signals_1h = self.signals_dict[symbol][2]
-            signals_4h = self.signals_dict[symbol][3]
+            # signals_1m = self.signals_dict[symbol][0]
+            signals_15m = self.signals_dict[symbol][0]
+            signals_1h = self.signals_dict[symbol][1]
+            signals_4h = self.signals_dict[symbol][2]
             h4 = True if signals_4h.df.ema_50.iloc[-1] > signals_4h.df.ema_200.iloc[-1] else False
             h1 = True if signals_1h.df.ema_50.iloc[-1] > signals_1h.df.ema_200.iloc[-1] else False
             m15 = True if signals_15m.df.ema_50.iloc[-1] > signals_15m.df.ema_200.iloc[-1] else False
-            m1 = True if signals_1m.df.ema_50.iloc[-1] > signals_1m.df.ema_200.iloc[-1] else False
-            self.trend_markers[symbol] = (m1, m15, h1, h4)
+            # m1 = True if signals_1m.df.ema_50.iloc[-1] > signals_1m.df.ema_200.iloc[-1] else False
+            self.trend_markers[symbol] = (m15, h1, h4)
         return self.trend_markers
 
-    def long_condition_rsi_ema(self):
+    def long_condition(self):
         self.get_signals()
         self.check_emas()
         for symbol in self.signals_dict.keys():
-            if self.trend_markers[symbol][3] and self.trend_markers[symbol][2]:
-                if self.signals_dict[symbol][1].rsi_ob_os_dict['oversold']:
+            if self.trend_markers[symbol][2] and self.trend_markers[symbol][1]:
+                if self.signals_dict[symbol][0].rsi_ob_os_dict['oversold']:
+                    buy = f'BUY {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
                     with open('buys.txt', 'a') as f:
-                        f.write(f'BUY {symbol} at {datetime.now().strftime("%H:%M:%S")}')
+                        f.write(buy)
+                    print(buy)
+
+    def short_condition(self):
+        self.get_signals()
+        self.check_emas()
+        for symbol in self.signals_dict.keys():
+            if not self.trend_markers[symbol][2] and not self.trend_markers[symbol][1]:
+                if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought']:
+                    sell = f'SELL {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
+                    with open('buys.txt', 'a') as f:
+                        f.write(sell)
+                    print(sell)
 
     def schedule_tasks(self):
-        self.data_thread.setDaemon(True)
-        self.data_thread.start()
-        scheduler = BackgroundScheduler()
-        scheduler.add_job(self.data.save_new_data, trigger="cron", minute='0,13,15,28,30,43,45,58', second=57)
-        scheduler.add_job(self.long_condition_rsi_ema, trigger='cron', minute='1,14,16,29,31,44,46,59')
-        scheduler.start()
+        self.scheduler.add_job(self.long_condition, trigger='cron', minute='*/5')
+        self.scheduler.add_job(self.short_condition, trigger='cron', minute='*/5')
+        self.scheduler.start()
+
+    def stop_tasks(self):
+        self.scheduler.remove_all_jobs()
+        self.scheduler.shutdown()
 
 
 if __name__ == '__main__':
     at = AlgoTrader()
-    at.long_condition_rsi_ema()
-    at.schedule_tasks()
+    at.long_condition()
+    at.short_condition()
+    try:
+        at.schedule_tasks()
+    except KeyboardInterrupt as e:
+        at.stop_tasks()
+        raise e

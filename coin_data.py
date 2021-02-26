@@ -1,7 +1,9 @@
 import csv
 import os
+import sqlite3
 import time
 from datetime import datetime
+from threading import Thread
 
 import pandas as pd
 from binance.client import Client
@@ -27,7 +29,7 @@ class CoinData:
         """Get most popular symbols, download historical data, start live data web socket"""
         print('Getting symbol list')
         self.symbols = get_popular_coins()  # [:NUMBER_OF_SYMBOLS]
-        self.intervals = ['1m', '15m', '1h', '4h']
+        self.intervals = ['1m', '15m', '1h', '4h']    # '1m',
         self.latest_klines = {}
         self.data_dict = {}
         for s in self.symbols:
@@ -36,8 +38,7 @@ class CoinData:
             for interval in self.intervals:
                 self.data_dict[s][interval] = []
                 self.latest_klines[s][interval] = {}
-        print('Downloading symbol data')
-        self.get_original_data()
+
         self.tf_dict = {
             '1m': 1,
             '15m': 15,
@@ -47,7 +48,12 @@ class CoinData:
         self.bsm = BinanceSocketManager(client)
         self.conn_key = self.bsm.start_multiplex_socket(self.get_streams(), self.get_data)
         self.shutdown = False
-
+        self.t = Thread(target=self.websocket_loop)
+        self.t.setDaemon(True)
+        self.t.start()
+        self.create_database()
+        self.save_original_data()
+        print('Coin data initialized')
 
     def get_data(self, msg):
         static = msg
@@ -62,77 +68,103 @@ class CoinData:
 
     @staticmethod
     def get_dataframe(symbol, interval):
-        filename = os.path.join(data_path, symbol + f'-{interval}' + '.csv')
-        df = pd.read_csv(filename)
-        df.datetime = pd.to_datetime(df.datetime)
-        df.set_index('datetime', inplace=True)
-        df.rename_axis('datetime', inplace=True)
+        if not symbol[0].isalpha():
+            symbol = symbol[1:]
+        conn = sqlite3.connect('symbols.db')
+        try:
+            df = pd.read_sql_query(f'SELECT * FROM {symbol}_{interval}', conn)
+            df.date = pd.to_datetime(df.date)
+            df.set_index('date', inplace=True)
+            df.rename_axis('date', inplace=True)
+        finally:
+            conn.close()
+
         return df
 
-    def save_new_data(self):
-        # TODO: save data to signals.db (create table symbol_data)
-        for symbol in self.symbols:
-            for interval in self.intervals:
-                filename = os.path.join(data_path, symbol + f'-{interval}' + '.csv')
-                if self.latest_klines[symbol][interval]:
-                    new_row = [datetime.fromtimestamp(self.latest_klines[symbol][interval]['t']/1000),
-                               self.latest_klines[symbol][interval]['o'],
-                               self.latest_klines[symbol][interval]['h'],
-                               self.latest_klines[symbol][interval]['l'],
-                               self.latest_klines[symbol][interval]['c'],
-                               self.latest_klines[symbol][interval]['q']]
-                    old_rows = []
-                    with open(filename, 'r') as f:
-                        reader = csv.reader(f)
-                        for row in reader:
-                            if row:
-                                old_rows.append(row)
-                    if old_rows:
-                        old_dt = str(old_rows[-1][0])
-                        new_dt = str(new_row[0])
-                        # print(old_rows[-1], new_row)
-                        if old_dt == new_dt:
-                            old_rows.pop(-1)
-                            old_rows.append(new_row)
-                            with open(filename, 'w', newline='') as f:
-                                writer = csv.writer(f)
-                                writer.writerows(old_rows)
-                                # print(f'{symbol} {interval} changed old row')
+    def create_database(self):
+        conn = sqlite3.connect('symbols.db')
+        cursor = conn.cursor()
+        try:
+            for symbol in self.symbols:
+                for interval in self.intervals:
+                    safe_symbol = self.check_symbol(symbol)
+                    query = f'CREATE TABLE {safe_symbol}_{interval} (date datetime, open dec(6, 8), ' \
+                            f'high dec(6, 8), low dec(6, ' \
+                            f'8), close dec(' \
+                            f'6, 8), volume dec(12, 2))'
+                    try:
+                        cursor.execute(query)
+                    except sqlite3.OperationalError as e:
+                        if str(e)[-6:] == 'exists':
+                            continue
                         else:
-                            with open(filename, 'a', newline='') as f:
-                                writer = csv.writer(f)
-                                writer.writerow(new_row)
-                                # print(f'{symbol} {interval} wrote new row')
-                    else:
-                        with open(filename, 'a', newline='') as f:
-                            writer = csv.writer(f)
-                            writer.writerow(new_row)
-                            # print(f'{symbol} {interval} wrote first row')
+                            raise e
+        finally:
+            conn.commit()
+            conn.close()
 
-    def get_original_data(self):
-        for symbol in self.symbols:
-            for interval in self.intervals:
-                filename = os.path.join(data_path, symbol + f'-{interval}' + '.csv')
-                data = client.futures_klines(symbol=symbol, interval=interval, requests_params={'timeout': 20})
-                with open(filename, 'w', newline='') as f:
-                    writer = csv.writer(f)
-                    first_row = ['datetime', 'open', 'high', 'low', 'close', 'volume']
-                    writer.writerow(first_row)
+    def check_symbol(self, symbol):
+        safe_symbol = symbol
+        if not symbol[0].isalpha():
+            safe_symbol = symbol[1:]
+            self.check_symbol(safe_symbol)
+        return safe_symbol
+
+    def save_original_data(self):
+        print('Downloading historical data')
+        conn = sqlite3.connect('symbols.db')
+        cursor = conn.cursor()
+        try:
+            for symbol in self.symbols:
+                for interval in self.intervals:
+                    data = client.futures_klines(symbol=symbol, interval=interval, requests_params={'timeout': 20})
                     for kline in data:
-                        row = [datetime.fromtimestamp(kline[0]/1000),
+                        row = [datetime.fromtimestamp(kline[0] / 1000),
                                float(kline[1]),
                                float(kline[2]),
                                float(kline[3]),
                                float(kline[4]),
                                float(kline[7]),
                                ]
-                        writer.writerow(row)
+                        safe_symbol = self.check_symbol(symbol)
+                        query = f'''INSERT INTO {safe_symbol}_{interval} VALUES 
+    ("{row[0]}", {row[1]}, {row[2]}, {row[3]}, {row[4]}, {row[5]})'''
+                        cursor.execute(query)
+        finally:
+            conn.commit()
+            conn.close()
+
+    def save_latest_data(self):
+        conn = sqlite3.connect('symbols.db')
+        cursor = conn.cursor()
+        try:
+            for symbol in self.symbols:
+                for interval in self.intervals:
+                    if self.latest_klines[symbol][interval]:
+                        new_row = [datetime.fromtimestamp(self.latest_klines[symbol][interval]['t'] / 1000),
+                                   self.latest_klines[symbol][interval]['o'],
+                                   self.latest_klines[symbol][interval]['h'],
+                                   self.latest_klines[symbol][interval]['l'],
+                                   self.latest_klines[symbol][interval]['c'],
+                                   self.latest_klines[symbol][interval]['q']]
+                        safe_symbol = self.check_symbol(symbol)
+                        date_query= f'SELECT MAX(date) FROM {safe_symbol}_{interval}'
+                        old_row_date = cursor.execute(date_query).fetchone()[0]
+                        if str(old_row_date) == str(new_row[0]):
+                            query = f'UPDATE {safe_symbol}_{interval} SET open = {new_row[1]}, high = {new_row[2]}, low = {new_row[3]}, close = {new_row[4]}, volume = {new_row[5]} WHERE date = (SELECT MAX(date) FROM {safe_symbol}_{interval})'
+                        else:
+                            query = f'''INSERT INTO {safe_symbol}_{interval} VALUES 
+    ("{new_row[0]}", {new_row[1]}, {new_row[2]}, {new_row[3]}, {new_row[4]}, {new_row[5]})'''
+                        cursor.execute(query)
+        finally:
+            conn.commit()
+            conn.close()
 
     def get_streams(self):
         streams = []
         for symbol in self.symbols:
-            streams += [f'{symbol.lower()}@kline_1m', f'{symbol.lower()}@kline_15m', f'{symbol.lower()}@kline_1h',
-                        f'{symbol.lower()}@kline_4h']
+            for interval in self.intervals:
+                streams += [f'{symbol.lower()}@kline_{interval.lower()}']
         return streams
 
     def websocket_loop(self):
@@ -141,15 +173,16 @@ class CoinData:
             while True:
                 time.sleep(1)
         except Exception as e:
+            print(e)
+        finally:
             self.bsm_tear_down()
-            raise e
 
     def bsm_tear_down(self):
-        self.shutdown = True
         self.bsm.stop_socket(self.conn_key)
         reactor.stop()
+        print('bsm tear down success')
 
 
 if __name__ == "__main__":
-    c = CoinData()
-    c.websocket_loop()
+    # c = CoinData()
+    print(CoinData.get_dataframe('BTCUSDT', '1h'))
