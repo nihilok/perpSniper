@@ -67,7 +67,7 @@ class AlgoTrader:
         self.get_signals()
         self.check_emas()
         for symbol in self.signals_dict.keys():
-            if self.trend_markers[symbol][1] and self.trend_markers[2]:
+            if self.trend_markers[symbol][1] and self.trend_markers[symbol][2]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['oversold'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bullish divergence']:
                     alert = f'LONG {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
                     if alert not in {alert[0] for alert in self.recent_alerts}:
@@ -83,7 +83,7 @@ class AlgoTrader:
         self.get_signals()
         self.check_emas()
         for symbol in self.signals_dict.keys():
-            if not self.trend_markers[symbol][1] and not self.trend_markers[2]:
+            if not self.trend_markers[symbol][1] and not self.trend_markers[symbol][2]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bearish divergence']:
                     alert = f'SHORT {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
                     if alert not in {alert[0] for alert in self.recent_alerts}:
