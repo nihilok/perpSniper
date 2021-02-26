@@ -1,12 +1,15 @@
-import asyncio
+import logging
 import time
 from datetime import datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from trader import Trader, Trade
+from trader import Trader
 from coin_data import CoinData
 from signals import Signals
+
+
+logger = logging.getLogger(__name__)
 
 
 class AlgoTrader:
@@ -59,7 +62,7 @@ class AlgoTrader:
             self.trend_markers[symbol] = (m15, h1, h4)
         return self.trend_markers
 
-    async def long_condition(self):
+    def long_condition(self):
         self.purge_alerts()
         self.get_signals()
         self.check_emas()
@@ -67,17 +70,15 @@ class AlgoTrader:
             if self.trend_markers[symbol][1] and self.trend_markers[symbol][2]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['oversold'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bullish divergence']:
                     alert = f'LONG {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
-                    if alert not in [alert[0] for alert in self.recent_alerts]:
+                    if symbol not in [position['symbol'] for position in self.trader.return_open_positions()]:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         self.recent_alerts.append((alert, datetime.now()))
-                        if symbol not in [position['symbol'] for position in self.trader.return_open_positions()]:
-                            self.trader.trade(symbol, True)
-
+                        self.trader.trade(symbol, True)
                         print(alert)
         return True
 
-    async def short_condition(self):
+    def short_condition(self):
         self.purge_alerts()
         self.get_signals()
         self.check_emas()
@@ -85,14 +86,12 @@ class AlgoTrader:
             if not self.trend_markers[symbol][1] and not self.trend_markers[symbol][2]:
                 if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought'] or self.signals_dict[symbol][0].rsi_div_dict['confirmed bearish divergence']:
                     alert = f'SHORT {symbol} at {datetime.now().strftime("%H:%M:%S")}\n'
-                    if alert not in [alert[0] for alert in self.recent_alerts]:
+                    if symbol not in [position['symbol'] for position in self.trader.return_open_positions()]:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         self.recent_alerts.append((alert, datetime.now()))
-                        if symbol not in [position['symbol'] for position in self.trader.return_open_positions()]:
-                            self.trader.trade(symbol, False)
+                        self.trader.trade(symbol, False)
                         print(alert)
-        return True
 
     def purge_alerts(self):
         old_alerts = []
@@ -102,20 +101,27 @@ class AlgoTrader:
         for alert in old_alerts:
             self.recent_alerts.remove(alert)
 
-    async def check_conditions(self):
-        l = self.event_loop.create_task(self.long_condition())
-        s = self.event_loop.create_task(self.short_condition())
-        await asyncio.wait([l,s])
+    def check_conditions(self):
+        start_time = datetime.now()
+        print('checking long')
+        self.long_condition()
+        print('took', (datetime.now() - start_time))
+        print('checking short')
+        self.short_condition()
+        print('done')
+        print(self.recent_alerts)
+        total_time = datetime.now() - start_time
+        print('both took', total_time)
 
-    def start_async(self):
-        self.event_loop.run_until_complete(self.check_conditions())
+    # def start_async(self):
+    #     self.event_loop.run_until_complete(self.check_conditions())
 
     def save_data(self):
         self.data.save_latest_data()
 
     def schedule_tasks(self):
         self.scheduler.add_job(self.save_data, trigger='cron', minute='*/1', second="58")
-        self.scheduler.add_job(self.start_async, trigger='cron', minute='*/1')
+        self.scheduler.add_job(self.check_conditions, trigger='cron', minute='*/1')
         self.scheduler.start()
 
     def stop_tasks(self):
@@ -124,13 +130,13 @@ class AlgoTrader:
 
     def loop(self):
         try:
-            self.event_loop = asyncio.get_event_loop()
+            # self.event_loop = asyncio.get_event_loop()
             self.schedule_tasks()
             while True:
                 time.sleep(1)
         except KeyboardInterrupt as e:
             self.stop_tasks()
-            self.event_loop.close()
+            # self.event_loop.close()
             raise e
 
 
