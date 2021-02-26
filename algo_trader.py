@@ -73,7 +73,7 @@ class AlgoTrader:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         print(alert)
-                        self.trader.trade(symbol, 'LONG')
+                        self.trader.trade(symbol, True)
                         self.recent_alerts.append((alert, datetime.now()))
         return True
 
@@ -88,7 +88,7 @@ class AlgoTrader:
                         with open('buys.txt', 'a') as f:
                             f.write(alert)
                         print(alert)
-                        self.trader.trade(symbol, 'SHORT')
+                        self.trader.trade(symbol, False)
                         self.recent_alerts.append((alert, datetime.now()))
         self.purge_alerts()
         return True
