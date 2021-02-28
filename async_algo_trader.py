@@ -23,7 +23,7 @@ class AlgoTrader:
 
     """Check each coin for signals and make trades in certain conditions.
     Conditions:
-    - 15m RSI oversold and RSI divergence, and 1h ema_50/ema_200 trend"""
+    - 15m RSI oversold/overbought and RSI divergence, and 1h ema_50/ema_200 trend"""
 
     data = CoinData()
     trader = Trader()

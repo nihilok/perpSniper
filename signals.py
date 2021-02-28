@@ -76,7 +76,7 @@ class Signals:
         indices = np.array([])
 
         # bearish divergence confirmed: rsi formed lower peak while price formed higher peak
-        if 70 <= rsi_array[rsi_peaks[-2]] >= rsi_array[rsi_peaks[-1]] >= rsi_array[-1]:
+        if 70 <= rsi_array[rsi_peaks[-2]] >= rsi_array[rsi_peaks[-1]] >= rsi_array[-2] >= rsi_array[-1]:
             if close_array[rsi_peaks[-2]] <= close_array[rsi_peaks[-1]]:
                 close_array = np.array([close_array[rsi_peaks[-2]], close_array[rsi_peaks[-1]]])
                 rsi_array = np.array([rsi_array[rsi_peaks[-2]], rsi_array[rsi_peaks[-1]]])
@@ -84,7 +84,7 @@ class Signals:
                 self.rsi_div_dict['confirmed bearish divergence'] = True
 
         # possible bearish divergence: rsi forming lower peak while price forming higher peak
-        elif 70 <= rsi_array[rsi_peaks[-1]] >= rsi_array[-1]:
+        elif 70 <= rsi_array[rsi_peaks[-1]] >= rsi_array[-2] > rsi_array[-1]:
             if close_array[rsi_peaks[-1]] <= close_array[-1]:
                 close_array = np.array([close_array[rsi_peaks[-1]], close_array[-1]])
                 rsi_array = np.array([rsi_array[rsi_peaks[-1]], rsi_array[-1]])
@@ -92,7 +92,7 @@ class Signals:
                 self.rsi_div_dict['possible bearish divergence'] = True
 
         # bullish divergence confirmed: rsi formed higher trough while price formed lower trough
-        elif 30 >= rsi_array[rsi_troughs[-2]] <= rsi_array[rsi_troughs[-1]] <= rsi_array[-1]:
+        elif 30 >= rsi_array[rsi_troughs[-2]] <= rsi_array[rsi_troughs[-1]] <= rsi_array[-2] <= rsi_array[-1]:
             if close_array[rsi_troughs[-2]] >= close_array[rsi_troughs[-1]]:
                 close_array = np.array([close_array[rsi_troughs[-2]], close_array[rsi_troughs[-1]]])
                 rsi_array = np.array([rsi_array[rsi_troughs[-2]], rsi_array[rsi_troughs[-1]]])
@@ -100,7 +100,7 @@ class Signals:
                 self.rsi_div_dict['confirmed bullish divergence'] = True
 
         # possible bullish divergence: rsi forming higher trough while price forming lower trough
-        elif 30 >= rsi_array[rsi_troughs[-1]] <= rsi_array[-1]:
+        elif 30 >= rsi_array[rsi_troughs[-1]] <= rsi_array[-2] < rsi_array[-1]:
             if close_array[rsi_troughs[-1]] >= close_array[-1]:
                 close_array = np.array([close_array[rsi_troughs[-1]], close_array[-1]])
                 rsi_array = np.array([rsi_array[rsi_troughs[-1]], rsi_array[-1]])

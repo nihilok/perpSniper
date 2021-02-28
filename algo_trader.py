@@ -23,7 +23,7 @@ class AlgoTrader:
 
     """Check each coin for signals and make trades in certain conditions.
     Conditions:
-    - 15m RSI oversold and RSI divergence, and 1h ema_50/ema_200 trend"""
+    - 15m RSI oversold/overbought and RSI divergence, and 1h ema_50/ema_200 trend"""
 
     data = CoinData()
     trader = Trader()
@@ -97,27 +97,26 @@ class AlgoTrader:
         old_alerts = []
         for alert in self.recent_alerts:
             split_alert = alert.split(' ')
-            if datetime.strptime(split_alert[3], '%Y-%m-%d %H:%M:%S') < datetime.now() - timedelta(minutes=45):
+            if datetime.strptime(' '.join(split_alert[3:5]), '%Y-%m-%d %H:%M:%S') < datetime.now() - timedelta(minutes=45):
                 old_alerts.append(alert)
         for alert in old_alerts:
             self.recent_alerts.remove(alert)
 
     def check_conditions(self):
         try:
-            logger.debug('checking signals')
+            logger.debug('checking signal data')
             start_time = datetime.now()
             self.get_signals()
             self.check_emas()
             self.purge_alerts()
             recent_alerts_symbols = [alert.split(' ')[1] for alert in self.recent_alerts]
-            open_positions = [position['symbol'] for position in self.trader.return_open_positions()]
+            open_positions = self.trader.check_positions_cancel_open_orders()
             log_statement = 'took: {}'.format(datetime.now() - start_time)
             logger.debug(log_statement)
             logger.debug('checking long')
             self.long_condition(open_positions, recent_alerts_symbols)
             logger.debug('checking short')
             self.short_condition(open_positions, recent_alerts_symbols)
-            self.trader.check_positions_cancel_open_orders()
             if self.recent_alerts:
                 recent = ', '.join(self.recent_alerts)
                 logger.debug(recent)

@@ -269,6 +269,7 @@ class Trader:
         diff = orders_symbols.difference(positions_symbols)
         for s in diff:
             self.client.futures_cancel_all_open_orders(symbol=s)
+        return orders_symbols
 
     def close_position(self, symbol):
         for position in self.return_open_positions():

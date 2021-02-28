@@ -83,17 +83,22 @@ class CoinData:
             cursor = conn.cursor()
             tabs = {tab[0] for tab in cursor.execute("select name from sqlite_master where type = 'table'").fetchall()}
             time = cursor.execute('SELECT MAX(date) FROM BTCUSDT_15m').fetchone()[0]
-            if time and datetime.strptime(time, '%Y-%m-%d %H:%M:%S') >= datetime.now() - timedelta(minutes=15):
+            if time and datetime.strptime(time, '%Y-%m-%d %H:%M:%S') >= datetime.now() - timedelta(minutes=30):
                 for symbol in self.symbols:
-                    if symbol + '_15m' in tabs:
+                    if self.check_symbol(symbol + '_15m') in tabs:
                         continue
                     else:
+                        print(f'{symbol} not in tabs')
                         os.remove('symbols.db')
                         self.create_database()
+                        break
+                return
             else:
+                print(f'{time} is too old')
                 os.remove('symbols.db')
                 self.create_database()
         else:
+            print('recreating database from scratch')
             conn = sqlite3.connect('symbols.db')
             cursor = conn.cursor()
             try:
