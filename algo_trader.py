@@ -13,7 +13,7 @@ from signals import Signals
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.INFO)
+handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - [ %(levelname)s ] - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -23,7 +23,8 @@ class AlgoTrader:
 
     """Check each coin for signals and make trades in certain conditions.
     Conditions:
-    - 15m RSI oversold/overbought and RSI divergence, and 1h ema_50/ema_200 trend"""
+    - 15m RSI oversold/overbought and RSI divergence, and 1h ema_50/ema_200 trend
+    - 15m RSI oversold/overbought in last hour and macd crossing up"""
 
     data = CoinData()
     trader = Trader()
@@ -32,14 +33,16 @@ class AlgoTrader:
     def __init__(self):
         self.signals_dict = {}
         self.trend_markers = {}
+        self.rsi_markers = {}
         self.get_signals()
         self.check_emas()
         self.event_loop = None
         self.recent_alerts = []
         self.trader = Trader()
         self.trader.settings['sl'] = 0.005
-        self.trader.settings['tp'] = 0.02
+        self.trader.settings['tp'] = 0.015
         self.trader.settings['qty'] = 0.01
+        self.trader.settings['db'] = 0.2
 
     def get_signals(self):
         inadequate_symbols = []
@@ -102,27 +105,101 @@ class AlgoTrader:
         for alert in old_alerts:
             self.recent_alerts.remove(alert)
 
+    def check_rsi_div(self, symbol):
+        if self.signals_dict[symbol][0].rsi_div_dict['confirmed bearish divergence']:
+            return False
+        elif self.signals_dict[symbol][0].rsi_div_dict['confirmed bullish divergence']:
+            return True
+        else:
+            return None
+
+    def check_rsi_ob_os(self, symbol):
+        if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought']:
+            return False
+        elif self.signals_dict[symbol][0].rsi_ob_os_dict['oversold']:
+            return True
+        else:
+            return None
+
+    def check_trend(self, symbol):
+        if self.trend_markers[symbol][1] and self.trend_markers[symbol][2]:
+            return True
+        elif not self.trend_markers[symbol][1] and not self.trend_markers[symbol][2]:
+            return False
+        else:
+            return None
+
+    def rsi_ob_os_trade(self):
+        for symbol in self.signals_dict.keys():
+            if self.check_trend(symbol) is True:
+                if self.check_rsi_ob_os(symbol) is True:
+                    self.trader.trade(symbol, True)
+            elif self.check_trend(symbol) is False:
+                if self.check_rsi_ob_os(symbol) is False:
+                    self.trader.trade(symbol, False)
+
+    def rsi_ob_os_marker(self):
+        for symbol in self.signals_dict.keys():
+            if self.check_trend(symbol) is True:
+                if self.check_rsi_ob_os(symbol) is True:
+                    self.rsi_markers['symbol'] = (True, datetime.now())
+            elif self.check_trend(symbol) is False:
+                if self.check_rsi_ob_os(symbol) is False:
+                    self.rsi_markers['symbol'] = (False, datetime.now())
+
+    def purge_rsi_markers(self):
+        old_keys = []
+        for key, value in self.rsi_markers.items():
+            if value[1] < datetime.now() - timedelta(hours=1):
+                old_keys.append(key)
+        for key in old_keys:
+            self.rsi_markers.pop(key, None)
+
+    def rsi_div_trade(self, open_positions, recent_alerts):
+        for symbol in self.signals_dict.keys():
+            if symbol not in open_positions and symbol not in recent_alerts:
+                if self.check_trend(symbol) is True:
+                    if self.check_rsi_div(symbol) is True:
+                        self.trader.trade(symbol, True)
+                        alert = f'LONGED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+                        self.handle_alert(alert)
+                elif self.check_trend(symbol) is False:
+                    if self.check_rsi_div(symbol) is False:
+                        self.trader.trade(symbol, False)
+                        alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+                        self.handle_alert(alert)
+
+    def handle_alert(self, alert):
+        self.recent_alerts.append(alert)
+        logger.info(alert)
+
     def check_conditions(self):
         try:
             logger.debug('checking signal data')
             start_time = datetime.now()
+
+            # Get new signals data
             self.get_signals()
             self.check_emas()
             self.purge_alerts()
             recent_alerts_symbols = [alert.split(' ')[1] for alert in self.recent_alerts]
             open_positions = self.trader.check_positions_cancel_open_orders()
+
             log_statement = 'took: {}'.format(datetime.now() - start_time)
             logger.debug(log_statement)
-            logger.debug('checking long')
-            self.long_condition(open_positions, recent_alerts_symbols)
-            logger.debug('checking short')
-            self.short_condition(open_positions, recent_alerts_symbols)
+            logger.debug('checking trade conditions')
+
+            # Check trade conditions
+            self.rsi_div_trade(open_positions, recent_alerts_symbols)
+
             if self.recent_alerts:
                 recent = ', '.join(self.recent_alerts)
                 logger.debug(recent)
+
             total_time = datetime.now() - start_time
             log_statement = 'total_time: {}'.format(total_time)
             logger.debug(log_statement)
+
         except Exception as e:
             log_statement = f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}: {e}'
             logger.warning(log_statement)
