@@ -13,7 +13,7 @@ from signals import Signals
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.INFO)
+handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - [ %(levelname)s ] - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -41,7 +41,7 @@ class AlgoTrader:
         self.trader.settings['tp'] = 0.02
         self.trader.settings['qty'] = 0.01
 
-    def get_signals(self):
+    async def get_signals(self):
         inadequate_symbols = []
         for symbol in self.data.symbols:
             try:
@@ -111,22 +111,27 @@ class AlgoTrader:
             self.purge_alerts()
             recent_alerts_symbols = [alert.split(' ')[1] for alert in self.recent_alerts]
             open_positions = [position['symbol'] for position in self.trader.return_open_positions()]
-            log_statement = 'took: {}'.format(datetime.now() - start_time)
+            log_statement = 'took: %s'.format(datetime.now() - start_time)
             logger.debug(log_statement)
             logger.debug('checking long')
             self.long_condition(open_positions, recent_alerts_symbols)
             logger.debug('checking short')
             self.short_condition(open_positions, recent_alerts_symbols)
             self.trader.check_positions_cancel_open_orders()
+            logger.debug('done')
             if self.recent_alerts:
                 recent = ', '.join(self.recent_alerts)
                 logger.debug(recent)
             total_time = datetime.now() - start_time
-            log_statement = 'total_time: {}'.format(total_time)
+            log_statement = 'total_time: %s'.format(total_time)
             logger.debug(log_statement)
         except Exception as e:
             log_statement = f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}: {e}'
             logger.warning(log_statement)
+
+
+    # def start_async(self):
+    #     self.event_loop.run_until_complete(self.check_conditions())
 
     def save_data(self):
         self.data.save_latest_data()
@@ -142,12 +147,14 @@ class AlgoTrader:
 
     def loop(self):
         try:
+            # self.event_loop = asyncio.get_event_loop()
             self.schedule_tasks()
             while True:
                 time.sleep(1)
         except KeyboardInterrupt as e:
             self.stop_tasks()
-            sys.exit()
+            # self.event_loop.close()
+            raise e
 
 
 if __name__ == '__main__':

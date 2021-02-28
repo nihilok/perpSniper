@@ -1,4 +1,3 @@
-import csv
 import os
 import sqlite3
 import time
@@ -6,7 +5,6 @@ from datetime import datetime, timedelta
 from threading import Thread
 
 import pandas as pd
-from binance.client import Client
 from binance.websockets import BinanceSocketManager
 from twisted.internet import reactor
 
@@ -80,13 +78,18 @@ class CoinData:
         return df
 
     def create_database(self):
-        query = f'SELECT MAX(date) FROM BTCUSDT_15m'
         if os.path.isfile('symbols.db'):
             conn = sqlite3.connect('symbols.db')
             cursor = conn.cursor()
-            time = cursor.execute(query).fetchone()[0]
+            tabs = {tab[0] for tab in cursor.execute("select name from sqlite_master where type = 'table'").fetchall()}
+            time = cursor.execute('SELECT MAX(date) FROM BTCUSDT_15m').fetchone()[0]
             if time and datetime.strptime(time, '%Y-%m-%d %H:%M:%S') >= datetime.now() - timedelta(minutes=15):
-                return
+                for symbol in self.symbols:
+                    if symbol + '_15m' in tabs:
+                        continue
+                    else:
+                        os.remove('symbols.db')
+                        self.create_database()
             else:
                 os.remove('symbols.db')
                 self.create_database()
