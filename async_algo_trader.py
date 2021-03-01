@@ -5,16 +5,14 @@ import time
 from datetime import datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from http.client import RemoteDisconnected
 from trader import Trader
 from coin_data import CoinData
 from signals import Signals
 
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
+handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - [ %(levelname)s ] - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -25,7 +23,7 @@ class AlgoTrader:
     """Check each coin for signals and make trades in certain conditions.
     Conditions:
     - 15m RSI oversold/overbought and RSI divergence, and 1h ema_50/ema_200 trend
-    - 15m RSI oversold/overbought in last hour and macd crossing up"""
+    - 15m RSI oversold/overbought in last hour and macd crossing up/down"""
 
     data = CoinData()
     trader = Trader()
@@ -35,24 +33,32 @@ class AlgoTrader:
         self.signals_dict = {}
         self.trend_markers = {}
         self.rsi_markers = {}
-        self.get_signals()
-        self.record_trend()
         self.event_loop = None
         self.recent_alerts = []
+        self.ready_symbols = {
+            'long': [],
+            'short': []
+        }
         self.trader = Trader()
-        self.trader.settings['sl'] = 0.005
-        self.trader.settings['tp'] = 0.015
+        self.trader.settings['sl'] = 0.1
+        self.trader.settings['tp'] = 0.25
         self.trader.settings['qty'] = 0.01
         self.trader.settings['db'] = 0.2
 
-    def get_signals(self):
+    @staticmethod
+    async def create_signals_instance(symbol, tf):
+        s = Signals(symbol, tf)
+        return s
+
+    async def get_signals(self):
+        logger.debug('Getting signals')
         inadequate_symbols = []
         for symbol in self.data.symbols:
             try:
-                self.signals_dict[symbol] = (   # Signals(symbol, '1m'),
-                                             Signals(symbol, '15m'),
-                                             Signals(symbol, '1h'),
-                                             Signals(symbol, '4h'))
+                m15 = asyncio.create_task(self.create_signals_instance(symbol, '15m'))
+                h1 = asyncio.create_task(self.create_signals_instance(symbol, '1h'))
+                h4 = asyncio.create_task(self.create_signals_instance(symbol, '4h'))
+                self.signals_dict[symbol] = (await m15, await h1, await h4)
             except IndexError:
                 inadequate_symbols.append(symbol)
                 continue
@@ -74,6 +80,7 @@ class AlgoTrader:
         return self.trend_markers
 
     async def purge_alerts(self):
+        logger.debug('Purging alerts')
         old_alerts = []
         for alert in self.recent_alerts:
             split_alert = alert.split(' ')
@@ -90,6 +97,14 @@ class AlgoTrader:
         else:
             return None
 
+    def check_macd(self, symbol):
+        if self.signals_dict[symbol][0].macd_dict['MACD cross'] is False or self.signals_dict[symbol][0].macd_dict['MACD 0 cross'] is False:
+            return False
+        elif self.signals_dict[symbol][0].macd_dict['MACD cross'] is True or self.signals_dict[symbol][0].macd_dict['MACD 0 cross'] is True:
+            return True
+        else:
+            return None
+
     def check_rsi_ob_os(self, symbol):
         if self.signals_dict[symbol][0].rsi_ob_os_dict['overbought']:
             return False
@@ -98,73 +113,130 @@ class AlgoTrader:
         else:
             return None
 
-    def check_trend(self, symbol):
-        if self.trend_markers[symbol][1] and self.trend_markers[symbol][2]:
+    def check_4h_trend(self, symbol):
+        if self.trend_markers[symbol][2]:
             return True
-        elif not self.trend_markers[symbol][1] and not self.trend_markers[symbol][2]:
+        elif not self.trend_markers[symbol][2]:
             return False
         else:
             return None
 
     async def rsi_ob_os_marker(self):
+        logger.debug('Checking RSI markers')
         for symbol in self.signals_dict.keys():
-            if self.check_trend(symbol) is True:
+            if self.check_4h_trend(symbol) is True:
                 if self.check_rsi_ob_os(symbol) is True:
-                    self.rsi_markers['symbol'] = (True, datetime.now())
-            elif self.check_trend(symbol) is False:
+                    self.rsi_markers[symbol] = (True, datetime.now())
+            elif self.check_4h_trend(symbol) is False:
                 if self.check_rsi_ob_os(symbol) is False:
-                    self.rsi_markers['symbol'] = (False, datetime.now())
+                    self.rsi_markers[symbol] = (False, datetime.now())
 
     async def purge_rsi_markers(self):
+        logger.debug('Purging RSI markers')
         old_keys = []
         for key, value in self.rsi_markers.items():
             if value[1] < datetime.now() - timedelta(hours=1):
                 old_keys.append(key)
-        for key in old_keys:
-            self.rsi_markers.pop(key, None)
+        if old_keys:
+            for key in old_keys:
+                self.rsi_markers.pop(key, None)
 
     async def rsi_div_trade(self, open_positions, recent_alerts):
+        logger.debug('Checking RSI div')
         for symbol in self.signals_dict.keys():
-            if symbol not in open_positions and symbol not in recent_alerts:
-                if self.check_trend(symbol) is True:
+            if open_positions is not None and symbol not in open_positions and symbol not in recent_alerts:
+                if self.check_4h_trend(symbol) is True:
                     if self.check_rsi_div(symbol) is True:
-                        self.trader.trade(symbol, True)
-                        alert = f'LONGED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+                        self.ready_symbols['long'].append(symbol)
+                        # self.trader.trade(symbol, True)
+                        alert = f'LONG {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI div signal)'
                         self.handle_alert(alert)
-                elif self.check_trend(symbol) is False:
+                elif self.check_4h_trend(symbol) is False:
                     if self.check_rsi_div(symbol) is False:
-                        self.trader.trade(symbol, False)
-                        alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+                        self.ready_symbols['short'].append(symbol)
+                        # self.trader.trade(symbol, False)
+                        alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI div signal)'
                         self.handle_alert(alert)
+
+    async def rsi_macd_trade(self, open_positions, recent_alerts):
+        logger.debug('Checking MACD')
+        for symbol in self.signals_dict.keys():
+            if symbol in self.rsi_markers.keys():
+                if open_positions is not None and symbol not in open_positions and symbol not in recent_alerts:
+                    if self.rsi_markers[symbol][0]:
+                        if self.check_4h_trend(symbol) is True:
+                            if self.check_macd(symbol) is True:
+                                # self.trader.trade(symbol, True)
+                                self.ready_symbols['long'].append(symbol)
+                                alert = f'LONGED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (MACD signal)'
+                                self.handle_alert(alert)
+                    else:
+                        if self.check_4h_trend(symbol) is False:
+                            if self.check_macd(symbol) is False:
+                                # self.trader.trade(symbol, False)
+                                self.ready_symbols['short'].append(symbol)
+                                alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (MACD signal)'
+                                self.handle_alert(alert)
+
+    async def ha_long(self):
+        for symbol in self.ready_symbols['long']:
+            if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '1m'))[['HA_Open', 'HA_Close']]) is True:
+                self.trader.trade(symbol, True)
+                alert = f'LONGED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} HEIKEN ASHI FINAL SIGNAL'
+                self.handle_alert(alert)
+        self.ready_symbols['long'] = []
+
+    async def ha_short(self):
+        for symbol in self.ready_symbols['short']:
+            if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '1m'))[['HA_Open', 'HA_Close']]) is False:
+                self.trader.trade(symbol, False)
+                alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} HEIKEN ASHI FINAL SIGNAL'
+                self.handle_alert(alert)
+        self.ready_symbols['short'] = []
+
+    async def check_heiken_ashi(self):
+        logger.debug('Checking final condition (Heiken Ashi)')
+        long_task = asyncio.create_task(self.ha_long())
+        short_task = asyncio.create_task(self.ha_short())
+        await long_task
+        await short_task
 
     def handle_alert(self, alert):
         self.recent_alerts.append(alert)
         logger.info(alert)
 
-    async def check_conditions(self):
-        logger.debug('checking signal data')
-        start_time = datetime.now()
+    async def get_recent_alerts(self):
+        return [alert.split(' ')[1] for alert in self.recent_alerts]
 
+    async def get_open_positions(self):
+        return self.trader.check_positions_cancel_open_orders()
+
+    async def check_conditions(self):
+        start_time = datetime.now()
+        logger.debug('Starting check')
         # Get new signals data
-        await self.purge_alerts()
-        self.get_signals()
+        await self.get_signals()
         self.record_trend()
-        recent_alerts_symbols = [alert.split(' ')[1] for alert in self.recent_alerts]
-        open_positions = self.trader.check_positions_cancel_open_orders()
+        task1 = asyncio.create_task(self.get_recent_alerts())
+        task2 = asyncio.create_task(self.get_open_positions())
+        recent_alerts_symbols = await task1
+        open_positions = await task2
 
         log_statement = 'took: {}'.format(datetime.now() - start_time)
         logger.debug(log_statement)
 
         # Check trade conditions
-        logger.debug('checking trade conditions')
         task_1 = asyncio.create_task(self.rsi_div_trade(open_positions, recent_alerts_symbols))
-        task_2 = asyncio.create_task(self.rsi_ob_os_marker())
+        task_2 = asyncio.create_task(self.rsi_macd_trade(open_positions, recent_alerts_symbols))
+        task_3 = asyncio.create_task(self.rsi_ob_os_marker())
         await task_1
         await task_2
+        await task_3
 
-        logger.debug('purging alerts')
+        heiken_ashi_check = asyncio.create_task(self.check_heiken_ashi())
         task_1 = asyncio.create_task(self.purge_alerts())
         task_2 = asyncio.create_task(self.purge_rsi_markers())
+        await heiken_ashi_check
         await task_1
         await task_2
 
@@ -175,12 +247,11 @@ class AlgoTrader:
         log_statement = 'total_time: {}'.format(total_time)
         logger.debug(log_statement)
 
-
     def save_data(self):
         self.data.save_latest_data()
 
     def schedule_tasks(self):
-        self.scheduler.add_job(self.save_data, trigger='cron', minute='*/1', second="58")
+        self.scheduler.add_job(self.save_data, trigger='cron', minute='*/1', second='2')
         # self.scheduler.add_job(self.check_conditions, trigger='cron', minute='*/1')
         self.scheduler.start()
 
@@ -190,10 +261,17 @@ class AlgoTrader:
 
     def loop(self):
         try:
+            asyncio.run(self.get_signals())
+            self.record_trend()
             self.schedule_tasks()
+            while datetime.now().second != 3:
+                time.sleep(1)
+            log_statement = f'Starting mainloop at {datetime.now().strftime("%H:%M:%S")}'
+            logger.info(log_statement)
             while True:
-                time.sleep(60)
                 asyncio.run(self.check_conditions())
+                while datetime.now().second != 3:
+                    time.sleep(1)
         except KeyboardInterrupt as e:
             self.stop_tasks()
             sys.exit()

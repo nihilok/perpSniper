@@ -83,7 +83,7 @@ def ticker_websocket_loop():
     data = bsm.start_ticker_socket(live_vol_data)
     try:
         bsm.start()
-        while not len(local_tickers):
+        while len(local_tickers) < 91:
             time.sleep(1)
     finally:
         bsm.stop_socket(data)

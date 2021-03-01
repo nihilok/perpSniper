@@ -1,5 +1,7 @@
 import csv
+import http
 import json
+import logging
 import os
 import sqlite3
 import time
@@ -10,12 +12,16 @@ from threading import Thread
 from binance.client import Client
 from binance.exceptions import BinanceAPIException, BinanceOrderException
 from binance.websockets import BinanceSocketManager
+from http.client import RemoteDisconnected
+from urllib3.exceptions import ProtocolError
+from requests.exceptions import ConnectionError
 
 file_path = os.path.abspath(os.path.dirname(__file__))
 os.chdir(file_path)
 data_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(data_path, 'data')
 
+logger = logging.getLogger(__name__)
 
 def setup():
     """Initial setup getting user input"""
@@ -59,17 +65,18 @@ class Trade:
                  sl: float,
                  db: float,
                  info: dict,
-                 trader):
+                 trader,
+                 perpetual=False):
         """
-        Create long or short trade.
-        :param symbol: str denoting symbol pair to be traded, e.g. 'BTCUSDT'
-        :param direction: bool indicating if trade direction is long (True) or short (False)
-        :param quantity: float percentage of balance to be traded
-        :param tp: float take profit activation price
-        :param sl: float stop loss stop price
-        :param db: float callback/drawback rate for trailing tp
-        :param info: dict symbol exchange information such as 'pricePrecision'
-        :param trader: Trader class object with Binance api client
+            Create long or short trade.
+            :param symbol: str denoting symbol pair to be traded, e.g. 'BTCUSDT'
+            :param direction: bool indicating if trade direction is long (True) or short (False)
+            :param quantity: float percentage of balance to be traded
+            :param tp: float take profit activation price
+            :param sl: float stop loss stop price
+            :param db: float callback/drawback rate for trailing tp
+            :param info: dict symbol exchange information such as 'pricePrecision'
+            :param trader: Trader class object with Binance api client
         """
         self.date = datetime.now()
         self.symbol = symbol
@@ -83,10 +90,11 @@ class Trade:
         self.sl = sl
         self.db = float(db)
         self.price_decimals = f"{{:.{self.info['pricePrecision']}f}}"
-        self.trade()
-        self.price = self.update_entry_price()
-        self.stop_loss()
-        self.take_profit()
+        if not perpetual:
+            self.trade()
+            self.price = self.update_entry_price()
+            self.stop_loss()
+            self.take_profit()
 
     def update_entry_price(self):
         for position in self.trader.return_open_positions():
@@ -151,6 +159,55 @@ class Trade:
             raise e
 
 
+class PerpetualTrade(Trade):
+
+    trade_counter = 0
+
+    def __init__(self, *args):
+        super().__init__(*args, perpetual=True)
+        if self.direction is True:
+            self.long()
+        elif self.direction is False:
+            self.short()
+        else:
+            return
+        self.update_entry_price()
+        self.stop_loss()
+
+    def long(self):
+        if self.direction is True:
+            self.trade()
+        elif self.direction is False:
+            self.reverse_trade()
+        self.trade_counter += 1
+
+    def short(self):
+        if self.direction is False:
+            self.trade()
+        elif self.direction is True:
+            self.reverse_trade()
+        self.trade_counter += 1
+
+    def flat(self):
+        if self.trade_counter > 2:
+            self.quantity /= 2
+        self.trader.close_position(self.symbol)
+        self.trade_counter = 0
+        self.direction = None
+
+    def reverse_trade(self):
+        self.client.futures_cancel_all_open_orders(symbol=self.symbol)
+        self.direction = False if self.direction else True
+        if self.trade_counter == 1:
+            self.quantity *= 2
+        self.trade()
+        try:
+            self.update_entry_price()
+            self.stop_loss()
+        except (BinanceAPIException, BinanceOrderException) as e:
+            raise e
+
+
 class Trader:
     def __init__(self):
         """
@@ -163,7 +220,7 @@ class Trader:
         self.mark_prices = {}
         self.open_positions_local = []
         self.settings = get_settings()
-        self.client = Client(self.settings['api_key'], self.settings['api_secret'])
+        self.client = Client(self.settings['api_key'], self.settings['api_secret'], requests_params={'timeout': 30})
         self.server_time = datetime.fromtimestamp(self.return_server_time()).strftime('%H:%M:%S')
         self.bsm_1 = BinanceSocketManager(self.client)
 
@@ -264,12 +321,19 @@ class Trader:
         return set([position['symbol'] for position in self.return_open_positions()])
 
     def check_positions_cancel_open_orders(self):
-        positions_symbols = set([position['symbol'] for position in self.return_open_positions()])
-        orders_symbols = set([order['symbol'] for order in self.client.futures_get_open_orders()])
-        diff = orders_symbols.difference(positions_symbols)
-        for s in diff:
-            self.client.futures_cancel_all_open_orders(symbol=s)
-        return orders_symbols
+        try:
+            positions_symbols = set([position['symbol'] for position in self.return_open_positions()])
+            orders = self.client.futures_get_open_orders()
+            orders_symbols = set([order['symbol'] for order in orders])
+            diff = orders_symbols.difference(positions_symbols)
+            for s in diff:
+                self.client.futures_cancel_all_open_orders(symbol=s)
+            return orders_symbols
+        except (RemoteDisconnected, ProtocolError, ConnectionError) as e:
+            error = f'Binance connection error: {e}'
+            logger.error(error)
+            time.sleep(1)
+            self.check_positions_cancel_open_orders()
 
     def close_position(self, symbol):
         for position in self.return_open_positions():

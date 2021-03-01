@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from threading import Thread
 
 import pandas as pd
+import numpy as np
+import scipy.signal
 from binance.websockets import BinanceSocketManager
 from twisted.internet import reactor
 
@@ -25,6 +27,7 @@ NUMBER_OF_SYMBOLS = 50
 class CoinData:
     def __init__(self):
         """Get most popular symbols, download historical data, start live data web socket"""
+        os.system('cls' if os.name == 'nt' else 'clear')
         print('Getting symbol list')
         self.symbols = get_popular_coins()  # [:NUMBER_OF_SYMBOLS]
         self.intervals = ['1m', '15m', '1h', '4h']    # '1m',
@@ -51,6 +54,7 @@ class CoinData:
         self.t.start()
         self.create_database()
         print('Coin data initialized')
+        self.most_volatile_symbols = self.return_most_volatile()
 
     def get_data(self, msg):
         static = msg
@@ -77,24 +81,49 @@ class CoinData:
             conn.close()
         return df
 
+    @staticmethod
+    def volatility(df):
+        df = df.tail(16)
+        close_array = np.array(df['close'].tail(40).array)
+        peaks, _peaks = scipy.signal.find_peaks(close_array)
+        troughs, _troughs = scipy.signal.find_peaks(-close_array)
+        if close_array[peaks][0] < close_array[peaks][-1]:
+            divisor = max(close_array[peaks])
+        else:
+            divisor = min(close_array[troughs])
+        return (max(close_array[peaks]) - min(close_array[troughs])) / divisor
+
+    def return_most_volatile(self, n=10):
+        volatities = []
+        for symbol in self.symbols:
+
+            volatities.append((symbol, self.volatility(self.get_dataframe(symbol, '15m'))))
+        volatities = sorted(volatities, key=lambda x: x[1], reverse=True)
+        return volatities[:n]
+
     def create_database(self):
         if os.path.isfile('symbols.db'):
             conn = sqlite3.connect('symbols.db')
             cursor = conn.cursor()
             tabs = {tab[0] for tab in cursor.execute("select name from sqlite_master where type = 'table'").fetchall()}
-            time = cursor.execute('SELECT MAX(date) FROM BTCUSDT_15m').fetchone()[0]
-            if time and datetime.strptime(time, '%Y-%m-%d %H:%M:%S') >= datetime.now() - timedelta(minutes=30):
-                for symbol in self.symbols:
-                    if self.check_symbol(symbol + '_15m') in tabs:
-                        continue
-                    else:
-                        print(f'{symbol} not in tabs')
-                        os.remove('symbols.db')
-                        self.create_database()
-                        break
-                return
+            if tabs:
+                time = cursor.execute('SELECT MAX(date) FROM BTCUSDT_15m').fetchone()[0]
+                if time and datetime.strptime(time, '%Y-%m-%d %H:%M:%S') >= datetime.now() - timedelta(minutes=30):
+                    for symbol in self.symbols:
+                        if self.check_symbol(symbol + '_15m') in tabs:
+                            continue
+                        else:
+                            print(f'{symbol} not in tabs')
+                            os.remove('symbols.db')
+                            self.create_database()
+                            break
+                    return
+                else:
+                    print(f'{time} is too old')
+                    os.remove('symbols.db')
+                    self.create_database()
             else:
-                print(f'{time} is too old')
+                print('no tables in database')
                 os.remove('symbols.db')
                 self.create_database()
         else:
@@ -203,5 +232,7 @@ class CoinData:
 
 
 if __name__ == "__main__":
-    # c = CoinData()
-    print(CoinData.get_dataframe('BTCUSDT', '1h'))
+    c = CoinData()
+    while True:
+        c.save_latest_data()
+        time.sleep(5)
