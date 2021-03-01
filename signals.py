@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+
 import pandas as pd
 import pandas_ta as ta
 import numpy as np
@@ -21,8 +23,10 @@ class Signals:
         self.tf = tf
         self.df = CoinData.get_dataframe(symbol, tf)
         self.df = self.df_ta()
+        # self.df = self.get_heiken_ashi()
         self.vol_signal = self.vol_rise_fall()
         self.vol_candle = self.large_vol_candle()
+        # self.HA_trend = self.get_heiken_ashi_trend(self.get_heiken_ashi(self.df))
         self.rsi_ob_os_dict = {
             'overbought': False,
             'oversold': False,
@@ -66,6 +70,37 @@ class Signals:
             df['ema_200'] = ta.ema(df.close, len(df.close) - 3)
         df = df.tail(88)
         return df
+
+    @staticmethod
+    def get_heiken_ashi(df):
+        df['HA_Close'] = (df['open'] + df['high'] + df['low'] + df['close']) / 4
+        idx = df.index.name
+        df.reset_index(inplace=True)
+
+        for i in range(0, len(df)):
+            if i == 0:
+                df.at[i, 'HA_Open'] = ((df._get_value(i, 'open') + df._get_value(i, 'close')) / 2)
+            else:
+                df.at[i, 'HA_Open'] = ((df._get_value(i - 1, 'HA_Open') + df._get_value(i - 1, 'HA_Close')) / 2)
+
+        if idx:
+            df.set_index(idx, inplace=True)
+
+        df['HA_High'] = df[['HA_Open', 'HA_Close', 'high']].max(axis=1)
+        df['HA_Low'] = df[['HA_Open', 'HA_Close', 'low']].min(axis=1)
+
+        return df
+
+    @staticmethod
+    def get_heiken_ashi_trend(df):
+        if df['HA_Close'].iloc[-1] > df['HA_Open'].iloc[-1]:
+            if df['HA_Close'].iloc[-2] > df['HA_Open'].iloc[-2]:
+                return True
+        elif df['HA_Close'].iloc[-1] < df['HA_Open'].iloc[-1]:
+            if df['HA_Close'].iloc[-2] < df['HA_Open'].iloc[-2]:
+                return False
+        else:
+            return None
 
     def rsi_divergence(self):
         rsi_array = np.array(self.df['rsi'].tail(20).array)
@@ -111,24 +146,24 @@ class Signals:
 
     def rsi_overbought_oversold(self, o_s=30, o_b=70):
         rsi_array = self.df['rsi'].array
-        if rsi_array[-1] > o_s > rsi_array[-2]:
+        if rsi_array[-3] <= o_s <= rsi_array[-2]:
             self.rsi_ob_os_dict['oversold'] = True
-        elif rsi_array[-1] < o_b < rsi_array[-2]:
+        elif rsi_array[-3] >= o_b >= rsi_array[-2]:
             self.rsi_ob_os_dict['overbought'] = True
         return self.rsi_ob_os_dict
 
     def macd_signals(self):
-        if self.df['MACD_12_26_9'].array[-1] > self.df['MACDs_12_26_9'].array[-1]:
-            if self.df['MACD_12_26_9'].array[-2] < self.df['MACDs_12_26_9'].array[-2]:
+        if self.df['MACD_12_26_9'].array[-2] > self.df['MACDs_12_26_9'].array[-2]:
+            if self.df['MACD_12_26_9'].array[-3] < self.df['MACDs_12_26_9'].array[-3]:
                 self.macd_dict['MACD cross'] = True
-        elif self.df['MACD_12_26_9'].array[-1] < self.df['MACDs_12_26_9'].array[-1]:
-            if self.df['MACD_12_26_9'].array[-2] > self.df['MACDs_12_26_9'].array[-2]:
+        elif self.df['MACD_12_26_9'].array[-2] < self.df['MACDs_12_26_9'].array[-2]:
+            if self.df['MACD_12_26_9'].array[-3] > self.df['MACDs_12_26_9'].array[-3]:
                 self.macd_dict['MACD cross'] = False
-        if (self.df['MACD_12_26_9'].array[-1], self.df['MACDs_12_26_9'].array[-1]) > (0, 0):
-            if (self.df['MACD_12_26_9'].array[-2], self.df['MACDs_12_26_9'].array[-2]) <= (0, 0):
+        if (self.df['MACD_12_26_9'].array[-2], self.df['MACDs_12_26_9'].array[-2]) > (0, 0):
+            if (self.df['MACD_12_26_9'].array[-3], self.df['MACDs_12_26_9'].array[-3]) <= (0, 0):
                 self.macd_dict['MACD 0 cross'] = True
-        elif (self.df['MACD_12_26_9'].array[-1], self.df['MACDs_12_26_9'].array[-1]) < (0, 0):
-            if (self.df['MACD_12_26_9'].array[-2], self.df['MACDs_12_26_9'].array[-2]) >= (0, 0):
+        elif (self.df['MACD_12_26_9'].array[-2], self.df['MACDs_12_26_9'].array[-2]) < (0, 0):
+            if (self.df['MACD_12_26_9'].array[-3], self.df['MACDs_12_26_9'].array[-3]) >= (0, 0):
                 self.macd_dict['MACD 0 cross'] = False
 
     def ema_signals(self):
@@ -160,4 +195,7 @@ class Signals:
         return self.vol_candle
 
 if __name__ == '__main__':
-    sig = Signals('ADAUSDT')
+    x = datetime.now()
+    df = CoinData.get_dataframe('BTCUSDT', '15m')
+    print(Signals.get_heiken_ashi(df))
+    print(datetime.now() - x)
