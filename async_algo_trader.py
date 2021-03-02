@@ -12,6 +12,7 @@ from coin_data import CoinData
 from signals import Signals
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
 handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - [ %(levelname)s ] - %(message)s')
@@ -290,7 +291,9 @@ class AlgoTrader:
     def debug_statements(self):
         log = 'Recent alerts: ' + ', '.join(self.recent_alerts)
         logger.debug(log)
-        log = 'Ready symbols: ' + ', '.join(self.ready_symbols)
+        log = 'Ready symbols long: ' + ', '.join(self.ready_symbols['long'])
+        logger.debug(log)
+        log = 'Ready symbols short: ' + ', '.join(self.ready_symbols['short'])
         logger.debug(log)
 
 
