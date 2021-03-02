@@ -185,7 +185,7 @@ class AlgoTrader:
 
     async def ha_long(self):
         for symbol in self.ready_symbols['long']:
-            if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '1m'))[['HA_Open', 'HA_Close']]) is True:
+            if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '15m'))[['HA_Open', 'HA_Close']]) is True:
                 self.trader.trade(symbol, True)
                 alert = f'LONGED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} HEIKEN ASHI FINAL SIGNAL'
                 self.handle_alert(alert)
@@ -193,7 +193,7 @@ class AlgoTrader:
 
     async def ha_short(self):
         for symbol in self.ready_symbols['short']:
-            if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '1m'))[['HA_Open', 'HA_Close']]) is False:
+            if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '15m'))[['HA_Open', 'HA_Close']]) is False:
                 self.trader.trade(symbol, False)
                 alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} HEIKEN ASHI FINAL SIGNAL'
                 self.handle_alert(alert)
