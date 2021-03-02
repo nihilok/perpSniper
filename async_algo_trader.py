@@ -133,12 +133,16 @@ class AlgoTrader:
                 if self.check_rsi_ob_os(symbol) is True:
                     if self.signals_dict[symbol].macd_dict['MACD up']:
                         self.ready_symbols['long'].append(symbol)
+                        alert = f'LONG {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI oversold signal)'
+                        self.handle_alert(alert)
                     else:
                         self.rsi_markers[symbol] = (True, datetime.now())
             elif self.check_4h_trend(symbol) is False:
                 if self.check_rsi_ob_os(symbol) is False:
                     if not self.signals_dict[symbol].macd_dict['MACD up']:
                         self.ready_symbols['short'].append(symbol)
+                        alert = f'SHORT {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI oversold signal)'
+                        self.handle_alert(alert)
                     else:
                         self.rsi_markers[symbol] = (False, datetime.now())
 
