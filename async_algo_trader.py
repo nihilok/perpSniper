@@ -155,7 +155,7 @@ class AlgoTrader:
                     if self.check_rsi_div(symbol) is False:
                         self.ready_symbols['short'].append(symbol)
                         # self.trader.trade(symbol, False)
-                        alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI div signal)'
+                        alert = f'SHORT {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI div signal)'
                         self.handle_alert(alert)
 
     async def rsi_macd_trade(self, open_positions, recent_alerts):
