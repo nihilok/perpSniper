@@ -131,10 +131,16 @@ class AlgoTrader:
         for symbol in self.signals_dict.keys():
             if self.check_4h_trend(symbol) is True:
                 if self.check_rsi_ob_os(symbol) is True:
-                    self.rsi_markers[symbol] = (True, datetime.now())
+                    if self.signals_dict[symbol].macd_dict['MACD up']:
+                        self.ready_symbols['long'].append(symbol)
+                    else:
+                        self.rsi_markers[symbol] = (True, datetime.now())
             elif self.check_4h_trend(symbol) is False:
                 if self.check_rsi_ob_os(symbol) is False:
-                    self.rsi_markers[symbol] = (False, datetime.now())
+                    if not self.signals_dict[symbol].macd_dict['MACD up']:
+                        self.ready_symbols['short'].append(symbol)
+                    else:
+                        self.rsi_markers[symbol] = (False, datetime.now())
 
     async def purge_rsi_markers(self):
         logger.debug('Purging RSI markers')
