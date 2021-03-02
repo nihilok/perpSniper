@@ -40,8 +40,8 @@ class AlgoTrader:
             'short': []
         }
         self.trader = Trader()
-        self.trader.settings['sl'] = 0.1
-        self.trader.settings['tp'] = 0.25
+        self.trader.settings['sl'] = 0.01
+        self.trader.settings['tp'] = 0.1
         self.trader.settings['qty'] = 0.01
         self.trader.settings['db'] = 0.2
 
