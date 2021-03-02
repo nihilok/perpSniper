@@ -168,14 +168,14 @@ class AlgoTrader:
                             if self.check_macd(symbol) is True:
                                 # self.trader.trade(symbol, True)
                                 self.ready_symbols['long'].append(symbol)
-                                alert = f'LONGED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (MACD signal)'
+                                alert = f'LONG {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (MACD signal)'
                                 self.handle_alert(alert)
                     else:
                         if self.check_4h_trend(symbol) is False:
                             if self.check_macd(symbol) is False:
                                 # self.trader.trade(symbol, False)
                                 self.ready_symbols['short'].append(symbol)
-                                alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (MACD signal)'
+                                alert = f'SHORT {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (MACD signal)'
                                 self.handle_alert(alert)
 
     async def ha_long(self):
