@@ -237,8 +237,8 @@ class AlgoTrader:
 
         # Check trade conditions
         task_1 = asyncio.create_task(self.rsi_div_trade(open_positions, recent_alerts_symbols))
-        task_2 = asyncio.create_task(self.rsi_macd_trade(open_positions, recent_alerts_symbols))
         task_3 = asyncio.create_task(self.rsi_ob_os_marker())
+        task_2 = asyncio.create_task(self.rsi_macd_trade(open_positions, recent_alerts_symbols))
         await task_1
         await task_3
         await task_2
