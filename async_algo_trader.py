@@ -1,9 +1,11 @@
 import asyncio
 import logging
+import os
 import sys
 import time
 from datetime import datetime, timedelta
 
+import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from trader import Trader
 from coin_data import CoinData
@@ -16,6 +18,11 @@ handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - [ %(levelname)s ] - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+
+# Telegram details
+BOT_TOKEN = os.getenv('tg_debug_bot_token')
+CHANNEL_ID = os.getenv('tg_debug_channel')
 
 
 class AlgoTrader:
@@ -204,6 +211,11 @@ class AlgoTrader:
     def handle_alert(self, alert):
         self.recent_alerts.append(alert)
         logger.info(alert)
+        self.send_message(alert)
+
+    def send_message(self, message):
+        message = 'TRADING BOT ALERT: ' + message
+        requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage?chat_id={CHANNEL_ID}&text={message}')
 
     async def get_recent_alerts(self):
         return [alert.split(' ')[1] for alert in self.recent_alerts]
