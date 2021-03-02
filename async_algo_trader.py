@@ -240,8 +240,8 @@ class AlgoTrader:
         task_2 = asyncio.create_task(self.rsi_macd_trade(open_positions, recent_alerts_symbols))
         task_3 = asyncio.create_task(self.rsi_ob_os_marker())
         await task_1
-        await task_2
         await task_3
+        await task_2
 
         heiken_ashi_check = asyncio.create_task(self.check_heiken_ashi())
         task_1 = asyncio.create_task(self.purge_alerts())
