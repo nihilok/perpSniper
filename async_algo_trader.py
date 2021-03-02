@@ -12,9 +12,8 @@ from coin_data import CoinData
 from signals import Signals
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.INFO)
+handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - [ %(levelname)s ] - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -75,14 +74,12 @@ class AlgoTrader:
 
     def record_trend(self):
         for symbol in self.data.symbols:
-            # signals_1m = self.signals_dict[symbol][0]
             signals_15m = self.signals_dict[symbol][0]
             signals_1h = self.signals_dict[symbol][1]
             signals_4h = self.signals_dict[symbol][2]
             h4 = True if signals_4h.df.ema_50.iloc[-1] > signals_4h.df.ema_200.iloc[-1] else False
             h1 = True if signals_1h.df.ema_50.iloc[-1] > signals_1h.df.ema_200.iloc[-1] else False
             m15 = True if signals_15m.df.ema_50.iloc[-1] > signals_15m.df.ema_200.iloc[-1] else False
-            # m1 = True if signals_1m.df.ema_50.iloc[-1] > signals_1m.df.ema_200.iloc[-1] else False
             self.trend_markers[symbol] = (m15, h1, h4)
         return self.trend_markers
 
@@ -258,6 +255,8 @@ class AlgoTrader:
         total_time = datetime.now() - start_time
         log_statement = 'total_time: {}'.format(total_time)
         logger.debug(log_statement)
+        if self.recent_alerts or self.ready_symbols:
+            self.debug_statements()
 
     def save_data(self):
         self.data.save_latest_data()
@@ -287,6 +286,12 @@ class AlgoTrader:
         except KeyboardInterrupt as e:
             self.stop_tasks()
             sys.exit()
+
+    def debug_statements(self):
+        log = 'Recent alerts: ' + ', '.join(self.recent_alerts)
+        logger.debug(log)
+        log = 'Ready symbols: ' + ', '.join(self.ready_symbols)
+        logger.debug(log)
 
 
 if __name__ == '__main__':
