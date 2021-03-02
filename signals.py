@@ -94,10 +94,12 @@ class Signals:
     @staticmethod
     def get_heiken_ashi_trend(df):
         if df['HA_Close'].iloc[-1] > df['HA_Open'].iloc[-1]:
-            if df['HA_Close'].iloc[-2] > df['HA_Open'].iloc[-2]:
+            if df['HA_Close'].iloc[-2] > df['HA_Open'].iloc[-2] or all([df['HA_Low'].iloc[-2] < df['HA_Open'].iloc[-2],
+                                                                       df['HA_High'].iloc[-2] > df['HA_Close'].iloc[-2]]):
                 return True
         elif df['HA_Close'].iloc[-1] < df['HA_Open'].iloc[-1]:
-            if df['HA_Close'].iloc[-2] < df['HA_Open'].iloc[-2]:
+            if df['HA_Close'].iloc[-2] < df['HA_Open'].iloc[-2] or all([df['HA_High'].iloc[-2] > df['HA_Open'].iloc[-2],
+                                                                       df['HA_Low'].iloc[-2] < df['HA_Close'].iloc[-2]]):
                 return False
         else:
             return None
