@@ -1,5 +1,7 @@
 import os
 import asyncio
+from datetime import datetime
+
 import aiohttp
 import nest_asyncio
 import sqlite3
@@ -58,9 +60,9 @@ class SignalData:
             coroutines.append(cls.get_macd(df))
             coroutines.append(cls.get_macd(df))
         # run coroutines with event loop and get return VALUES
-        ta = event_loop.run_until_complete(asyncio.gather(*coroutines))
+        ta_dfs = event_loop.run_until_complete(asyncio.gather(*coroutines))
         # return return values
-        return ta
+        return ta_dfs
 
     @classmethod
     async def get_rsi(cls, df):
@@ -82,29 +84,35 @@ class SignalData:
 
     @classmethod
     async def check_rsi(cls, df):
-        await asyncio.sleep(2)
+        # await asyncio.sleep(2)
         print('checked rsi')
         return 'RSI'
 
     @classmethod
     async def check_macd(cls, df):
-        await asyncio.sleep(1)
+        # await asyncio.sleep(1)
         print('checked macd')
-        return 'MACD'
+        return False, True
 
     @classmethod
     async def check_heiken_ashi(cls, df):
-        await asyncio.sleep(2)
+        # await asyncio.sleep(2)
         print('checked ha')
         return 'HA'
 
     @classmethod
     async def main(cls, symbol, event_loop):
+        start_time = datetime.now()
         dfs = await cls.return_dataframes(symbol, event_loop)
         coroutines = [cls.check_df(dfs[i], event_loop) for i in range(len(dfs))]
         results = event_loop.run_until_complete(asyncio.gather(*coroutines))
+        print(f'took: ' + str(datetime.now() - start_time))
         return results
 
+
 if __name__ == '__main__':
-    print(asyncio.run(SignalData.main('BTCUSDT', loop)))
+    start_time = datetime.now()
+    for s in ['BTCUSDT', 'LTCUSDT', 'ETHUSDT', 'BNBUSDT']:
+        print(asyncio.run(SignalData.main(s, loop)))
     loop.close()
+    print(f'took: ' + str(datetime.now() - start_time))
