@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import pickle
 import sys
 import time
 from datetime import datetime, timedelta
@@ -302,6 +303,12 @@ class AlgoTrader:
                     time.sleep(1)
         except KeyboardInterrupt as e:
             self.stop_tasks()
+            data = {
+                'recent': self.recent_alerts,
+                'ready': self.ready_symbols
+            }
+            with open('pickle', 'w') as f:
+                pickle.dump(data, f)
             sys.exit()
 
     def debug_statements(self):

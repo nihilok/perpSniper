@@ -167,7 +167,7 @@ class Signals:
         elif (self.df['MACD_12_26_9'].array[-2], self.df['MACDs_12_26_9'].array[-2]) < (0, 0):
             if (self.df['MACD_12_26_9'].array[-3], self.df['MACDs_12_26_9'].array[-3]) >= (0, 0):
                 self.macd_dict['MACD 0 cross'] = False
-        if self.df['MACD_12_26_9'].array[-1] < self.df['MACDs_12_26_9'].array[-1]:
+        if self.df['MACD_12_26_9'].array[-1] > self.df['MACDs_12_26_9'].array[-1]:
             self.macd_dict['MACD up'] = True
         else:
             self.macd_dict['MACD up'] = False
