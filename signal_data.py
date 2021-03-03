@@ -6,13 +6,14 @@ import aiohttp
 import nest_asyncio
 import sqlite3
 import pandas as pd
+import pandas_ta as ta
 import numpy as np
 import scipy.signal
 from binance.websockets import BinanceSocketManager
 from twisted.internet import reactor
 
 from trader import Trader
-
+from utils import get_popular_coins
 nest_asyncio.apply()
 
 file_path = os.path.abspath(os.path.dirname(__file__))
@@ -58,7 +59,8 @@ class SignalData:
         for df in dfs:
             coroutines.append(cls.get_rsi(df))
             coroutines.append(cls.get_macd(df))
-            coroutines.append(cls.get_macd(df))
+            coroutines.append(cls.get_emas(df))
+            coroutines.append(cls.get_heiken_ashi(df))
         # run coroutines with event loop and get return VALUES
         ta_dfs = event_loop.run_until_complete(asyncio.gather(*coroutines))
         # return return values
@@ -66,15 +68,41 @@ class SignalData:
 
     @classmethod
     async def get_rsi(cls, df):
-        pass
+        return ta.rsi(df.close, 14)
 
     @classmethod
     async def get_macd(cls, df):
-        pass
+        return ta.macd(df.close, 12, 26, 9)
+
+    @classmethod
+    async def get_emas(cls, df):
+        df['ema_20'], df['ema_50'] = ta.ema(df.close, 20), ta.ema(df.close, 50)
+        if len(df) >= 288:
+            df['ema_200'] = ta.ema(df.close, 200)
+        else:
+            df['ema_200'] = ta.ema(df.close, len(df.close) - 3)
+        df = df.tail(88)
+        return df[['ema_20', 'ema_50', 'ema_200']]
 
     @classmethod
     async def get_heiken_ashi(cls, df):
-        pass
+        df['HA_Close'] = (df['open'] + df['high'] + df['low'] + df['close']) / 4
+        idx = df.index.name
+        df.reset_index(inplace=True)
+
+        for i in range(0, len(df)):
+            if i == 0:
+                df.at[i, 'HA_Open'] = ((df._get_value(i, 'open') + df._get_value(i, 'close')) / 2)
+            else:
+                df.at[i, 'HA_Open'] = ((df._get_value(i - 1, 'HA_Open') + df._get_value(i - 1, 'HA_Close')) / 2)
+
+        if idx:
+            df.set_index(idx, inplace=True)
+
+        df['HA_High'] = df[['HA_Open', 'HA_Close', 'high']].max(axis=1)
+        df['HA_Low'] = df[['HA_Open', 'HA_Close', 'low']].min(axis=1)
+
+        return df[['HA_Open', 'HA_High', 'HA_Low', 'HA_Close']]
 
     @classmethod
     async def check_df(cls, df, event_loop):
@@ -112,7 +140,7 @@ class SignalData:
 
 if __name__ == '__main__':
     start_time = datetime.now()
-    for s in ['BTCUSDT', 'LTCUSDT', 'ETHUSDT', 'BNBUSDT']:
+    for s in get_popular_coins():
         print(asyncio.run(SignalData.main(s, loop)))
     loop.close()
     print(f'took: ' + str(datetime.now() - start_time))
