@@ -61,7 +61,7 @@ class CoinData:
     def adjust_symbols(self):
         conn = sqlite3.connect('symbols.db')
         curs = conn.cursor()
-        self.symbols = {tab[0] for tab in
+        self.symbols = {tab[0].split('_')[0] for tab in
                         curs.execute("select name from sqlite_master where type = 'table'").fetchall()}
         conn.close()
 
