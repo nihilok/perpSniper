@@ -35,8 +35,8 @@ class SignalData:
     async def return_dataframes(cls, symbol, event_loop):
         """Get complete dataframes for given symbol with signals data for all given timeframes
         Main method for initial data preparation"""
-        # return await cls.add_ta_data(await cls.get_original_data(symbol), event_loop)
-        return await cls.get_original_data(symbol)
+        return await cls.add_ta_data(await cls.get_original_data(symbol), event_loop)
+        # return await cls.get_original_data(symbol)
 
     @classmethod
     async def get_original_data(cls, symbol):
@@ -55,16 +55,20 @@ class SignalData:
     async def add_ta_data(cls, dfs, event_loop):
         """Create columns for RSI, MACD(m/s/h), EMAs(20/50/200), Heiken Ashi
         These can all be run as coroutine tasks"""
-        coroutines = []
-        for df in dfs:
-            coroutines.append(cls.get_rsi(df))
-            coroutines.append(cls.get_macd(df))
-            coroutines.append(cls.get_emas(df))
-            coroutines.append(cls.get_heiken_ashi(df))
+        coroutines = [[],[],[]]
+        for i, df in enumerate(dfs):
+            coroutines[i].append(cls.get_rsi(df))
+            coroutines[i].append(cls.get_macd(df))
+            coroutines[i].append(cls.get_emas(df))
+            coroutines[i].append(cls.get_heiken_ashi(df))
         # run coroutines with event loop and get return VALUES
-        ta_dfs = event_loop.run_until_complete(asyncio.gather(*coroutines))
+        sep_dfs = event_loop.run_until_complete(asyncio.gather(*coroutines))
+        comp_dfs = []
+        for t in sep_dfs:
+            df = pd.concat([t[i] for i in range(len(t))], axis=1)
+            comp_dfs.append(df)
         # return return values
-        return ta_dfs
+        return comp_dfs
 
     @classmethod
     async def get_rsi(cls, df):
