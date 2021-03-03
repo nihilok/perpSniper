@@ -59,11 +59,8 @@ class CoinData:
         self.most_volatile_symbols = self.return_most_volatile()
 
     def adjust_symbols(self):
-        conn = sqlite3.connect('symbols.db')
-        curs = conn.cursor()
-        self.symbols = {tab[0].split('_')[0] for tab in
-                        curs.execute("select name from sqlite_master where type = 'table'").fetchall()}
-        conn.close()
+        for symbol in self.bad_symbols:
+            self.symbols.remove(symbol)
 
     def get_data(self, msg):
         static = msg
