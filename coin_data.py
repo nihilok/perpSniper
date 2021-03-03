@@ -166,18 +166,24 @@ class CoinData:
             for symbol in self.symbols:
                 for interval in self.intervals:
                     data = client.futures_klines(symbol=symbol, interval=interval, requests_params={'timeout': 20})
-                    for kline in data:
-                        row = [datetime.fromtimestamp(kline[0] / 1000),
-                               float(kline[1]),
-                               float(kline[2]),
-                               float(kline[3]),
-                               float(kline[4]),
-                               float(kline[7]),
-                               ]
+                    if len(data) < 200:
                         safe_symbol = self.check_symbol(symbol)
-                        query = f'''INSERT INTO {safe_symbol}_{interval} VALUES 
-    ("{row[0]}", {row[1]}, {row[2]}, {row[3]}, {row[4]}, {row[5]})'''
+                        query = f'DROP TABLE {safe_symbol}_{interval}'
                         cursor.execute(query)
+                        break
+                    else:
+                        for kline in data:
+                            row = [datetime.fromtimestamp(kline[0] / 1000),
+                                   float(kline[1]),
+                                   float(kline[2]),
+                                   float(kline[3]),
+                                   float(kline[4]),
+                                   float(kline[7]),
+                                   ]
+                            safe_symbol = self.check_symbol(symbol)
+                            query = f'''INSERT INTO {safe_symbol}_{interval} VALUES 
+        ("{row[0]}", {row[1]}, {row[2]}, {row[3]}, {row[4]}, {row[5]})'''
+                            cursor.execute(query)
         finally:
             conn.commit()
             conn.close()
