@@ -137,25 +137,26 @@ class AlgoTrader:
         else:
             return None
 
-    async def rsi_ob_os_marker(self):
+    async def rsi_ob_os_marker(self, open_positions, recent_alerts):
         logger.debug('Checking RSI markers')
         for symbol in self.signals_dict.keys():
-            if self.check_4h_trend(symbol) is True:
-                if self.check_rsi_ob_os(symbol) is True:
-                    if self.signals_dict[symbol][0].macd_dict['MACD up']:
-                        self.ready_symbols['long'].append(symbol)
-                        alert = f'LONG {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI oversold signal)'
-                        self.handle_alert(alert)
-                    else:
-                        self.rsi_markers[symbol] = (True, datetime.now())
-            elif self.check_4h_trend(symbol) is False:
-                if self.check_rsi_ob_os(symbol) is False:
-                    if not self.signals_dict[symbol][0].macd_dict['MACD up']:
-                        self.ready_symbols['short'].append(symbol)
-                        alert = f'SHORT {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI overbought signal)'
-                        self.handle_alert(alert)
-                    else:
-                        self.rsi_markers[symbol] = (False, datetime.now())
+            if open_positions is not None and symbol not in open_positions and symbol not in recent_alerts:
+                if self.check_4h_trend(symbol) is True:
+                    if self.check_rsi_ob_os(symbol) is True:
+                        if self.signals_dict[symbol][0].macd_dict['MACD up']:
+                            self.ready_symbols['long'].append(symbol)
+                            alert = f'LONG {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI oversold signal)'
+                            self.handle_alert(alert)
+                        else:
+                            self.rsi_markers[symbol] = (True, datetime.now())
+                elif self.check_4h_trend(symbol) is False:
+                    if self.check_rsi_ob_os(symbol) is False:
+                        if not self.signals_dict[symbol][0].macd_dict['MACD up']:
+                            self.ready_symbols['short'].append(symbol)
+                            alert = f'SHORT {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (RSI overbought signal)'
+                            self.handle_alert(alert)
+                        else:
+                            self.rsi_markers[symbol] = (False, datetime.now())
 
     async def purge_rsi_markers(self):
         logger.debug('Purging RSI markers')
