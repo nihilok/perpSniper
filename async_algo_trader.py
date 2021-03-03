@@ -43,7 +43,7 @@ class AlgoTrader:
         self.rsi_markers = {}
         self.event_loop = None
         try:
-            with open('pickle', 'r') as f:
+            with open('pickle', 'rb') as f:
                 data = pickle.load(f)
                 if data['time'] >= datetime.now() - timedelta(minutes=15):
                     self.recent_alerts = data['recent']
@@ -318,7 +318,7 @@ class AlgoTrader:
                 'ready': self.ready_symbols,
                 'time': datetime.now()
             }
-            with open('pickle', 'w') as f:
+            with open('pickle', 'wb') as f:
                 pickle.dump(data, f)
             sys.exit()
 
