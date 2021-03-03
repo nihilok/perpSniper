@@ -170,6 +170,7 @@ class CoinData:
                         safe_symbol = self.check_symbol(symbol)
                         query = f'DROP TABLE {safe_symbol}_{interval}'
                         cursor.execute(query)
+                        print(f'Dropped {symbol} (not enough data)')
                         break
                     else:
                         for kline in data:
