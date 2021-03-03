@@ -48,6 +48,7 @@ class AlgoTrader:
                 if data['time'] >= datetime.now() - timedelta(minutes=15):
                     self.recent_alerts = data['recent']
                     self.ready_symbols = data['ready']
+                    print(f'ready symbols loaded: ' + ', '.join(self.ready_symbols))
                 else:
                     raise FileNotFoundError
         except FileNotFoundError:
