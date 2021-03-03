@@ -30,6 +30,7 @@ class CoinData:
         os.system('cls' if os.name == 'nt' else 'clear')
         print('Getting symbol list')
         self.symbols = get_popular_coins()  # [:NUMBER_OF_SYMBOLS]
+        self.bad_symbols = []
         self.intervals = ['1m', '15m', '1h', '4h']    # '1m',
         self.latest_klines = {}
         self.data_dict = {}
@@ -53,8 +54,16 @@ class CoinData:
         self.t.setDaemon(True)
         self.t.start()
         self.create_database()
+        self.adjust_symbols()
         print('Coin data initialized')
         self.most_volatile_symbols = self.return_most_volatile()
+
+    def adjust_symbols(self):
+        conn = sqlite3.connect('symbols.db')
+        curs = conn.cursor()
+        self.symbols = {tab[0] for tab in
+                        curs.execute("select name from sqlite_master where type = 'table'").fetchall()}
+        conn.close()
 
     def get_data(self, msg):
         static = msg
@@ -171,6 +180,7 @@ class CoinData:
                         query = f'DROP TABLE {safe_symbol}_{interval}'
                         cursor.execute(query)
                         print(f'Dropped {symbol} (not enough data)')
+                        self.bad_symbols.append(symbol)
                         break
                     else:
                         for kline in data:
