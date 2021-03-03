@@ -11,3 +11,4 @@ APScheduler==3.7.0
 python-binance==0.7.9
 urllib3==1.26.3
 requests==2.25.1
+aiohttp~=3.7.4
