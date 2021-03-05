@@ -140,7 +140,8 @@ class CoinData:
                 for symbol in self.symbols:
                     for interval in self.intervals:
                         safe_symbol = self.check_symbol(symbol)
-                        query = f'CREATE TABLE {safe_symbol}_{interval} (date datetime, open dec(6, 8), ' \
+                        query = f'CREATE TABLE {safe_symbol}_{interval} ' \
+                                f'(date datetime, open dec(6, 8), ' \
                                 f'high dec(6, 8), low dec(6, ' \
                                 f'8), close dec(' \
                                 f'6, 8), volume dec(12, 2))'
@@ -189,7 +190,7 @@ class CoinData:
                                    float(kline[7]),
                                    ]
                             safe_symbol = self.check_symbol(symbol)
-                            query = f'''INSERT INTO {safe_symbol}_{interval} VALUES 
+                            query = f'''INSERT INTO {safe_symbol}_{interval} VALUES
         ("{row[0]}", {row[1]}, {row[2]}, {row[3]}, {row[4]}, {row[5]})'''
                             cursor.execute(query)
         finally:
@@ -215,7 +216,7 @@ class CoinData:
                         if str(old_row_date) == str(new_row[0]):
                             query = f'UPDATE {safe_symbol}_{interval} SET open = {new_row[1]}, high = {new_row[2]}, low = {new_row[3]}, close = {new_row[4]}, volume = {new_row[5]} WHERE date = (SELECT MAX(date) FROM {safe_symbol}_{interval})'
                         else:
-                            query = f'''INSERT INTO {safe_symbol}_{interval} VALUES 
+                            query = f'''INSERT INTO {safe_symbol}_{interval} VALUES
     ("{new_row[0]}", {new_row[1]}, {new_row[2]}, {new_row[3]}, {new_row[4]}, {new_row[5]})'''
                         cursor.execute(query)
         finally:
