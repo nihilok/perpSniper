@@ -75,8 +75,7 @@ class CoinData:
 
     @staticmethod
     def get_dataframe(symbol, interval):
-        if not symbol[0].isalpha():
-            symbol = symbol[1:]
+        symbol = self.safe_symbol(symbol)
         conn = sqlite3.connect('symbols.db')
         try:
             df = pd.read_sql_query(f'SELECT * FROM {symbol}_{interval}', conn)
@@ -187,8 +186,7 @@ class CoinData:
                                    float(kline[2]),
                                    float(kline[3]),
                                    float(kline[4]),
-                                   float(kline[7]),
-                                   ]
+                                   float(kline[7])]
                             safe_symbol = self.check_symbol(symbol)
                             query = f'''INSERT INTO {safe_symbol}_{interval} VALUES
         ("{row[0]}", {row[1]}, {row[2]}, {row[3]}, {row[4]}, {row[5]})'''

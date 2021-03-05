@@ -84,7 +84,7 @@ class AlgoTrader:
             self.data.symbols.remove(symbol)
         return self.signals_dict
 
-    def record_trend(self):
+    async def record_trend(self):
         for symbol in self.data.symbols:
             signals_15m = self.signals_dict[symbol][0]
             signals_1h = self.signals_dict[symbol][1]
@@ -254,9 +254,13 @@ class AlgoTrader:
         logger.debug('Starting check')
         # Get new signals data
         await self.get_signals()
-        self.record_trend()
+        task0 = asyncio.create_task(self.record_trend())
         task1 = asyncio.create_task(self.get_recent_alerts())
         task2 = asyncio.create_task(self.get_open_positions())
+        # co_1 = [self.record_trend(),
+                # self.get_recent_alerts(),
+                # self.get_open_positions()]
+        await task0
         recent_alerts_symbols = await task1
         open_positions = await task2
 
