@@ -130,9 +130,9 @@ class AlgoTrader:
             return None
 
     def check_4h_trend(self, symbol):
-        if self.trend_markers[symbol][2]:
+        if self.trend_markers[symbol][2] and self.trend_markers[symbol][1]:
             return True
-        elif not self.trend_markers[symbol][2]:
+        elif not self.trend_markers[symbol][2] and not self.trend_markers[symbol][1]:
             return False
         else:
             return None
@@ -230,9 +230,9 @@ class AlgoTrader:
     async def check_heiken_ashi(self):
         logger.debug('Checking final condition (Heiken Ashi)')
         long_task = asyncio.create_task(self.ha_long())
-        short_task = asyncio.create_task(self.ha_short())
+        # short_task = asyncio.create_task(self.ha_short())
         await long_task
-        await short_task
+        # await short_task
 
     def handle_alert(self, alert):
         self.recent_alerts.append(alert)
