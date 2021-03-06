@@ -61,7 +61,8 @@ class AlgoTrader:
         self.trader.settings['sl'] = 0.005
         self.trader.settings['tp'] = 0.01
         self.trader.settings['qty'] = 0.01
-        self.trader.settings['db'] = 0.2
+        self.trader.settings['db'] = 0.1
+        self.event_loop = asyncio.get_event_loop()
 
     @staticmethod
     async def create_signals_instance(symbol, tf):
@@ -268,9 +269,12 @@ class AlgoTrader:
         logger.debug(log_statement)
 
         # Check trade conditions
-        task_1 = asyncio.create_task(self.rsi_div_trade(open_positions, recent_alerts_symbols))
-        task_3 = asyncio.create_task(self.rsi_ob_os_marker(open_positions, recent_alerts_symbols))
-        task_2 = asyncio.create_task(self.rsi_macd_trade(open_positions, recent_alerts_symbols))
+        task_1 = asyncio.create_task(self.rsi_div_trade(open_positions,
+                                                        recent_alerts_symbols))
+        task_3 = asyncio.create_task(self.rsi_ob_os_marker(open_positions,
+                                                           recent_alerts_symbols))
+        task_2 = asyncio.create_task(self.rsi_macd_trade(open_positions,
+                                                         recent_alerts_symbols))
         await task_1
         await task_3
         await task_2
@@ -296,7 +300,6 @@ class AlgoTrader:
 
     def schedule_tasks(self):
         self.scheduler.add_job(self.save_data, trigger='cron', minute='*/1', second='2')
-        # self.scheduler.add_job(self.check_conditions, trigger='cron', minute='*/1')
         self.scheduler.start()
 
     def stop_tasks(self):
@@ -306,7 +309,6 @@ class AlgoTrader:
     def loop(self):
         try:
             asyncio.run(self.get_signals())
-            self.record_trend()
             self.schedule_tasks()
             while datetime.now().second != 3:
                 time.sleep(1)

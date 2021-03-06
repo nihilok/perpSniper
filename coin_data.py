@@ -75,7 +75,8 @@ class CoinData:
 
     @staticmethod
     def get_dataframe(symbol, interval):
-        symbol = self.safe_symbol(symbol)
+        if not symbol[0].isalpha():
+            symbol = symbol[1:]
         conn = sqlite3.connect('symbols.db')
         try:
             df = pd.read_sql_query(f'SELECT * FROM {symbol}_{interval}', conn)
