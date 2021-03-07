@@ -23,6 +23,15 @@ data_path = os.path.join(data_path, 'data')
 
 logger = logging.getLogger(__name__)
 
+
+def check_symbol(symbol):
+    safe_symbol = symbol
+    if not symbol[0].isalpha():
+        safe_symbol = symbol[1:]
+        check_symbol(safe_symbol)
+    return safe_symbol
+
+
 def setup():
     """Initial setup getting user input"""
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -254,8 +263,9 @@ class Trader:
     def get_price(symbol):
         conn = sqlite3.connect('symbols.db')
         c = conn.cursor()
+        symbol = check_symbol(symbol)
         try:
-            q = f'SELECT * FROM {symbol}_1m WHERE date = (SELECT MAX(date) FROM {symbol}_1m)'
+            q = f'SELECT * FROM {symbol}_15m WHERE date = (SELECT MAX(date) FROM {symbol}_15m)'
             price = c.execute(q).fetchone()[3]
         finally:
             conn.close()

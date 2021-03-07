@@ -206,34 +206,36 @@ class AlgoTrader:
                                 alert = f'SHORT {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} (MACD signal)'
                                 self.handle_alert(alert)
 
-    async def ha_long(self):
+    async def ha_long(self, open_positions, recent_alerts):
         trades = []
         for symbol in self.ready_symbols['long']:
-            if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '15m'))) is True:
-                self.trader.trade(symbol, True)
-                alert = f'LONGED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} HEIKEN ASHI FINAL SIGNAL'
-                trades.append(symbol)
-                self.handle_alert(alert)
+            if open_positions is not None and symbol not in open_positions and symbol not in recent_alerts:
+                if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '15m'))) is True:
+                    self.trader.trade(symbol, True)
+                    alert = f'LONGED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} HEIKEN ASHI FINAL SIGNAL'
+                    trades.append(symbol)
+                    self.handle_alert(alert)
         for s in trades:
             self.ready_symbols['long'].remove(s)
 
-    async def ha_short(self):
+    async def ha_short(self, open_positions, recent_alerts):
         trades = []
         for symbol in self.ready_symbols['short']:
-            if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '15m'))) is False:
-                self.trader.trade(symbol, False)
-                alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} HEIKEN ASHI FINAL SIGNAL'
-                trades.append(symbol)
-                self.handle_alert(alert)
+            if open_positions is not None and symbol not in open_positions and symbol not in recent_alerts:
+                if Signals.get_heiken_ashi_trend(Signals.get_heiken_ashi(CoinData.get_dataframe(symbol, '15m'))) is False:
+                    self.trader.trade(symbol, False)
+                    alert = f'SHORTED {symbol} at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} HEIKEN ASHI FINAL SIGNAL'
+                    trades.append(symbol)
+                    self.handle_alert(alert)
         for s in trades:
             self.ready_symbols['short'].remove(s)
 
-    async def check_heiken_ashi(self):
+    async def check_heiken_ashi(self, open_positions, recent_alerts_symbols):
         logger.debug('Checking final condition (Heiken Ashi)')
-        long_task = asyncio.create_task(self.ha_long())
-        # short_task = asyncio.create_task(self.ha_short())
+        long_task = asyncio.create_task(self.ha_long(open_positions, recent_alerts_symbols))
+        short_task = asyncio.create_task(self.ha_short(open_positions, recent_alerts_symbols))
         await long_task
-        # await short_task
+        await short_task
 
     def handle_alert(self, alert):
         self.recent_alerts.append(alert)
@@ -279,7 +281,8 @@ class AlgoTrader:
         await task_3
         await task_2
 
-        heiken_ashi_check = asyncio.create_task(self.check_heiken_ashi())
+        heiken_ashi_check = asyncio.create_task(self.check_heiken_ashi(open_positions,
+                                                                       recent_alerts_symbols))
         task_1 = asyncio.create_task(self.purge_alerts())
         task_2 = asyncio.create_task(self.purge_rsi_markers())
         await heiken_ashi_check
