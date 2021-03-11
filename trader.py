@@ -198,7 +198,7 @@ class PerpetualTrade(Trade):
         self.trade_counter += 1
 
     def flat(self):
-        if self.trade_counter > 2:
+        if self.trade_counter > 1:
             self.quantity /= 2
         self.trader.close_position(self.symbol)
         self.trade_counter = 0

@@ -1,5 +1,7 @@
 import base64
+import datetime
 import io
+import os
 import sys
 
 import matplotlib
@@ -19,6 +21,26 @@ from coin_data import CoinData
 plt.style.use('dark_background')
 import numpy as np
 import numba as nb
+import csv
+
+from binance.client import Client
+
+client = Client(os.getenv('bbot_pub'), os.getenv('bbot_sec'))
+
+data_dict = {}
+
+def read_data():
+    with open('recent_trades.csv', newline='') as f:
+        trade_reader = csv.reader(f, delimiter=' ', quotechar='|')
+        for row in trade_reader:
+            if row:
+                # print()
+                if row[1] not in data_dict.keys():
+                    data_dict[row[1]] = [[row[0]] + row[2:]]
+                else:
+                    data_dict[row[1]].append([row[0]] + row[2:])
+    return data_dict
+
 
 @nb.jit(fastmath=True, nopython=True)
 def calc_rsi( array, deltas, avg_gain, avg_loss, n ):
@@ -81,6 +103,16 @@ class Charts:
             df['ema_200'] = ta.ema(df.close, len(df.close) - 3)
         df = df.tail(88)
         return df
+
+    def trades_series(self, symbol):
+        d = read_data()
+        for key in d.keys():
+            if key == symbol:
+                trades = [{'datetime': datetime.datetime.strptime(d[symbol][i][0], "%Y-%m-%d %H:%M:%S.%f"), 'price': d[symbol][i][2]} for i in range(len(d[symbol]))]
+                df = pd.DataFrame(trades)
+                df.set_index('datetime', inplace=True)
+                df.rename_axis('date', inplace=True)
+                return df
 
     @staticmethod
     def get_rsi_timeseries(prices, n=14):
@@ -160,6 +192,7 @@ class Charts:
         self.df.volume = self.df.volume.div(2)
         addplot_200 = mpf.make_addplot(self.df['ema_200'], type='line', ax=axes[0], width=1, color='#ff0066')
         addplot_50 = mpf.make_addplot(self.df['ema_50'], type='line', ax=axes[0], width=1, color='#00e600')
+        addplot_trades = mpf.make_addplot(self.trades_series(self.symbol), type='scatter', ax=axes[0], width=5, color='#fff')
         mpf.plot(self.df, ax=axes[0], type="candle", style=s, volume=ax_r, ylabel='', addplot=[addplot_200, addplot_50])
         max_vol = max({y for index, y in self.df.volume.items()})
         ax_r.axis(ymin=0, ymax=max_vol * 3)
@@ -226,3 +259,4 @@ if __name__ == '__main__':
     c.plot_charts()
     print('done')
     sys.exit()
+    # print(Charts('SNXUSDT', '15m').trades_series('SNXUSDT'))

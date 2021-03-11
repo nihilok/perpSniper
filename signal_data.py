@@ -1,5 +1,6 @@
 import os
 import asyncio
+import sys
 from datetime import datetime
 
 import aiohttp
@@ -62,11 +63,12 @@ class SignalData:
             coroutines[i].append(cls.get_emas(df))
             coroutines[i].append(cls.get_heiken_ashi(df))
         # run coroutines with event loop and get return VALUES
-        sep_dfs = event_loop.run_until_complete(asyncio.gather(*coroutines))
-        comp_dfs = []
-        for t in sep_dfs:
-            df = pd.concat([t[i] for i in range(len(t))], axis=1)
-            comp_dfs.append(df)
+        dfs_15 = event_loop.run_until_complete(asyncio.gather(*coroutines[0]))
+        dfs_1h = event_loop.run_until_complete(asyncio.gather(*coroutines[1]))
+        dfs_4h = event_loop.run_until_complete(asyncio.gather(*coroutines[2]))
+        comp_dfs = [pd.concat([dfs_15[i] for i in range(len(dfs_15))], axis=1),
+                    pd.concat([dfs_1h[i] for i in range(len(dfs_1h))], axis=1),
+                    pd.concat([dfs_4h[i] for i in range(len(dfs_4h))], axis=1)]
         # return return values
         return comp_dfs
 
@@ -80,8 +82,19 @@ class SignalData:
 
     @classmethod
     async def get_emas(cls, df):
+        if len(df) >= 20:
+            df['ema_20'] = ta.ema(df.close, 20)
+        else:
+            df['ema_20'], df['ema_50'] = ta.ema(df.close, len(df.close) - 3), ta.ema(df.close, len(df.close) - 3)
+        if len(df) >= 50:
+            df['ema_20'], df['ema_50'] = ta.ema(df.close, len(df.close) - 3), ta.ema(df.close, len(df.close) - 3)
+        else:
+            df['ema_20'] = ta.ema(df.close, 20)
+            df['ema_50'] = ta.ema(df.close, len(df.close) - 3)
+            df['ema_200'] = ta.ema(df.close, len(df.close) - 3)
         df['ema_20'], df['ema_50'] = ta.ema(df.close, 20), ta.ema(df.close, 50)
-        if len(df) >= 288:
+        if len(df) >= 200:
+            df['ema_20'], df['ema_50'] = ta.ema(df.close, 20), ta.ema(df.close, 50)
             df['ema_200'] = ta.ema(df.close, 200)
         else:
             df['ema_200'] = ta.ema(df.close, len(df.close) - 3)
@@ -117,34 +130,47 @@ class SignalData:
     @classmethod
     async def check_rsi(cls, df):
         # await asyncio.sleep(2)
-        print('checked rsi')
+        # print('checked rsi')
         return 'RSI'
 
     @classmethod
     async def check_macd(cls, df):
         # await asyncio.sleep(1)
-        print('checked macd')
+        # print('checked macd')
         return False, True
 
     @classmethod
     async def check_heiken_ashi(cls, df):
         # await asyncio.sleep(2)
-        print('checked ha')
+        # print('checked ha')
         return 'HA'
 
     @classmethod
     async def main(cls, symbol, event_loop):
-        start_time = datetime.now()
+        # start_time = datetime.now()
         dfs = await cls.return_dataframes(symbol, event_loop)
         coroutines = [cls.check_df(dfs[i], event_loop) for i in range(len(dfs))]
         results = event_loop.run_until_complete(asyncio.gather(*coroutines))
-        print(f'took: ' + str(datetime.now() - start_time))
+        # print(f'took: ' + str(datetime.now() - start_time))
         return results
 
 
 if __name__ == '__main__':
-    start_time = datetime.now()
-    for s in get_popular_coins():
-        print(asyncio.run(SignalData.main(s, loop)))
-    loop.close()
-    print(f'took: ' + str(datetime.now() - start_time))
+    try:
+        conn = sqlite3.connect('symbols.db')
+        curs = conn.cursor()
+        tabs = {tab[0] for tab in curs.execute("select name from sqlite_master where type = 'table'").fetchall()}
+        conn.close()
+        coroutines = []
+        start_time = datetime.now()
+        for s in get_popular_coins():
+            if s not in {'XEMUSDT', '1INCHUSDT'}:
+                coroutines.append(SignalData.main(s, loop))
+        data = loop.run_until_complete(asyncio.gather(*coroutines))
+        loop.close()
+        print(data)
+    except IndexError as e:
+        print(e)
+    finally:
+        print(f'took: ' + str(datetime.now() - start_time))
+
