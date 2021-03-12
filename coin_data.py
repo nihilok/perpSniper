@@ -27,7 +27,7 @@ NUMBER_OF_SYMBOLS = 50
 class CoinData:
     def __init__(self):
         """Get most popular symbols, download historical data, start live data web socket"""
-        os.system('cls' if os.name == 'nt' else 'clear')
+        # os.system('cls' if os.name == 'nt' else 'clear')
         print('Getting symbol list')
         self.symbols = get_popular_coins()  # [:NUMBER_OF_SYMBOLS]
         self.bad_symbols = []

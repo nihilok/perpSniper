@@ -34,7 +34,7 @@ def check_symbol(symbol):
 
 def setup():
     """Initial setup getting user input"""
-    os.system('cls' if os.name == 'nt' else 'clear')
+    # os.system('cls' if os.name == 'nt' else 'clear')
     print('Welcome to perpSniper v0.2 *alpha version, not financial advice, use at your own risk!')
     print('Initial setup needed....')
     print('\n\n\n\n')
